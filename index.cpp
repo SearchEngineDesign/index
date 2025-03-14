@@ -2,6 +2,42 @@
 
 #include "index.h"
 
+IndexHandler::IndexHandler( const char * filename ) {
+   int result;
+
+   fd = open(filename, O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
+   if (fd == -1) {
+      std::cerr << "Error opening index file";
+	   exit(1);
+   }
+
+   struct stat sb;
+   if (fstat(fd, &sb) == -1) {
+      perror("Error getting file size");
+      close(fd);
+      exit(1);
+   }
+   fsize = sb.st_size;
+
+   result = lseek(fd, fsize-1, SEEK_SET);
+   if (result == -1) {
+      index = new Index();
+      write(fd, index, sizeof(Index));
+      close(fd);
+      perror("Error calling lseek() to 'stretch' the file");
+      exit(1);
+   }
+
+   map = mmap(nullptr, fsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+   if (map == MAP_FAILED) {
+      close(fd);
+      std::cerr << "Error mapping index file";
+      exit(EXIT_FAILURE);
+   }
+   
+   index = reinterpret_cast<Index*>(map);
+}
+
 void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
@@ -29,20 +65,8 @@ void Index::addDocument(HtmlParser &parser) {
 
    for (auto i : parser.links) {
       //TODO: implement a better way to index anchor text
-      bool first = true;
-      for (auto j : i.anchorText) {
-         if (first) {
-            //places URL delta at beginning of corresponding anchor text
-            concat = urlMarker + i.URL;
-            seek = dict.Find(concat, PostingList(concat, Token::URL));
-            seek->value.appendTitleDelta(j.second + WordsInIndex); 
-            first = false;
-         }
-         concat = anchorMarker + j.first;
-         seek = dict.Find(concat, PostingList(concat, Token::Anchor));
-         seek->value.appendTitleDelta(j.second + WordsInIndex);
-      }     
    }
+
    seek = dict.Find(eodMarker, PostingList(eodMarker, Token::EoD));
    seek->value.appendEODDelta(parser.count + WordsInIndex, DocumentsInIndex);
    

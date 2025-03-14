@@ -137,7 +137,10 @@ private:
 
 class Index {
 public:
-    //Constructor should take in parsed HTML and add it to the index.
+    // Constructor should map filename to memory
+    Index( const char * filename );
+
+    // addDocument should take in parsed HTML and add it to the index.
     void addDocument(HtmlParser &parser);
     vector<string> documents;
     size_t WordsInIndex = 0, 
@@ -150,13 +153,30 @@ public:
     }
 
 private:
-    //HashBlob dictBlob;
     HashTable<string, PostingList> dict;
 
     string titleMarker = string("@");
     string anchorMarker = string("$");
     string urlMarker = string("#");
     string eodMarker = string("%");
+};
+
+struct IndexHandler {
+    int fd;
+    void *map;
+    Index *index;
+    int fsize = 0;
+    IndexHandler( const char * filename );
+    ~IndexHandler() {
+        if (msync(map, fsize, MS_SYNC) == -1) {
+            perror("Error syncing memory to file");
+            munmap(map, fsize);
+        }
+        if (munmap(map, fsize == -1)) {
+	        perror("Error un-mmapping the file");
+        }
+        close(fd);
+    }
 };
 
 class ISR {
