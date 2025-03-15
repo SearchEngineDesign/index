@@ -1,438 +1,154 @@
 //index.cpp
 
 #include "index.h"
+#include "indexBlob.h"
 
-string Index::completeLink(string link, string base_url)
-{
-   if (link.find("http://") == 0 || link.find("https://") == 0)
-   {
-      return link;
-   }
-   else
-   {
-      size_t slashCount = 0;
-      while (link.at(0) == '/') {
-         link = link.substr(1, link.length() - 1); //remove first character (/)
-         slashCount++;
-      }
-      while (base_url.at(base_url.length() - 1) == '/')
-         base_url = base_url.substr(0, base_url.length() - 1); //remove last character (/)
-      switch (slashCount) {
-         case 0:
-            return base_url + "/" + link;
-         case 1:
-            return base_url + "/" + link;
-         case 2:
-            return string("https://") + link;
-         default:
-            return "";
-      }  
-   }
+void IndexHandler::ReadIndex() {
+ 
 }
 
-void Index::addDocument(const char *buffer, size_t length )
-   {
-   size_t i = 0;  
-   bool inTitle = false;  
-   bool indiscard = false;  
-   bool inAnchor = false;
-   bool inHead = false;
-   bool inBold = false, inItalic = false;
-   string url;  
-   vector< string > curr_anchorText;  
-   const char *p = buffer;  
-   const char *end = buffer + length; 
+void IndexHandler::WriteIndex() {
 
-   if ( *p == 'h' && *(p+1) == 't' && *(p+2) == 't' && *(p+3) == 'p' )
-   {
-      while ( *p != '\n' )
-         p++;
-      base = string( buffer, p - buffer);
-      p++;
+}
+
+IndexHandler::IndexHandler( const char * filename ) {
+   int result;
+
+   fd = open(filename, O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
+   if (fd == -1) {
+      std::cerr << "Error opening index file";
+	   exit(1);
    }
 
-   while ( p < end )
-      {
-      if ( *p == '<' )
-         {
-         p++;  
-         bool endflag = ( *p == '/' );  
-         if ( endflag )
-            p++;  
+   struct stat sb;
+   if (fstat(fd, &sb) == -1) {
+      perror("Error getting file size");
+      close(fd);
+      exit(1);
+   }
+   fsize = sb.st_size;
 
-         const char *tag_start = p;  
-         while ( p < end && *p != '>' && *p != '/' && !isspace( *p ) )
-            p++;  
+   result = lseek(fd, fsize-1, SEEK_SET);
+   if (result == -1) {
+      index = new Index();
+      ib->Create(index);
+      WriteIndex();
+      close(fd);
+      perror("Error calling lseek() to 'stretch' the file");
+      exit(1);
+   }
 
-         DesiredAction action = LookupPossibleTag( tag_start, p );  
-         if ( endflag )
-            {
-            if ( action == DesiredAction::Title )
-               inTitle = false;  
-            else if ( action == DesiredAction::Head )
-               inHead = false;
-            else if ( action == DesiredAction::Anchor )
-               {
-               if ( inAnchor )
-                  {
-                  inAnchor = false;  
-                  if ( !url.empty() )
-                     {
-                     url = completeLink(url, base);
-                     if (!url.empty()) {
-                        Link curr_link( url );  
-                        links.push_back( curr_link );  
-                        links.back().anchorText = curr_anchorText;  
-                     }
-                     }
-                  curr_anchorText.clear();  
-                  }
-               else
-                  {
-                  while ( p < end && *p!= '>' )
-                     p++;  
-                  p ++;  
-                  continue;  
-                  }
-               }
-            else if ( action == DesiredAction::DiscardSection )
-               indiscard = false;  
-            else if ( action == DesiredAction::Bold )
-               inBold = false;
-            else if ( action == DesiredAction::Italic )
-               inItalic = false;
-            }
-         else
-            {
-            switch ( action )
-               {
-               case DesiredAction::Title:
-                  if ( inTitle )
-                     {
-                     while ( p < end && *p != '>' )
-                        p++;  
-                     p++;  
-                     continue;  
-                     }
-                  inTitle = true;  
-                  break;  
+   map = mmap(nullptr, fsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+   if (map == MAP_FAILED) {
+      close(fd);
+      std::cerr << "Error mapping index file";
+      exit(EXIT_FAILURE);
+   }
+   
+   ReadIndex();
+}
 
-               case DesiredAction::Base:
-                  while ( p < end && base.empty() )
-                     {
-                     if ( strncmp( p, "href=", 5 ) == 0 && p[ 5 ] == '"' )
-                        {
-                        p += 6;  
-                        const char *start = p;  
-                        while ( *p != '"' && p < end ) 
-                           p++;  
-                        base.assign( start, p - start );  
-                        break;  
-                        }
-                     else if ( memcmp( p, "/>", 2 ) == 0 )
-                        break;  
-                     p++;  
-                     }
-                  break;  
+void Index::addDocument(HtmlParser &parser) {
+   Tuple<string, PostingList> *seek;
+   string concat;
+   for (auto i : parser.bodyWords) {
+      seek = dict.Find(i.first, PostingList(i.first, Token::Body));
+      seek->value.appendBodyDelta(i.second + WordsInIndex, 0);
+   }
+   for (auto i : parser.headWords) {
+      seek = dict.Find(i.first, PostingList(i.first, Token::Body));
+      seek->value.appendBodyDelta(i.second + WordsInIndex, 3);
+   }
+   for (auto i : parser.boldWords) {
+      seek = dict.Find(i.first, PostingList(i.first, Token::Body));
+      seek->value.appendBodyDelta(i.second + WordsInIndex, 2);
+   }
+   for (auto i : parser.italicWords) {
+      seek = dict.Find(i.first, PostingList(i.first, Token::Body));
+      seek->value.appendBodyDelta(i.second + WordsInIndex, 1);
+   }
+   for (auto i : parser.titleWords) {
+      concat = string(&titleMarker) + i.first;
+      seek = dict.Find(concat, PostingList(concat, Token::Title));
+      seek->value.appendTitleDelta(i.second + WordsInIndex);
+   }
 
-               case DesiredAction::Embed:
-                  {
-                  string embed_url = "";  
-                  while ( p < end && *p != '>' )
-                     {
-                     if ( memcmp( p, "src=", 4 ) == 0 && p[ 4 ] == '"' )
-                        {
-                        p += 5;  
-                        const char *start = p;  
-                        while ( *p != '"' && p < end ) 
-                           p++;  
-                        embed_url.assign( start, p - start );  
-                        break;  
-                        }
-                     p++;  
-                     }
-                  if ( !embed_url.empty() )
-                     {
-                        url = completeLink(embed_url, base);
-                        if (url.find("http") != -1)
-                           links.push_back( url );
-                        else
-                           std::cout << "Mangled URL: " << url << std::endl;
-                     }
-                  break;  
-                  }
-               case DesiredAction::Anchor:
-                  while ( p < end && *p != '>' )
-                     {
-                     if ( strncmp( p, "href=", 5 ) == 0 && p[ 5 ] == '"' ) 
-                        {
-                        if ( inAnchor )
-                           {
-                           if ( !url.empty() )
-                              {
-                              url = completeLink(url, base);
-                              Link curr_link( url );  
-                              links.push_back( curr_link );  
-                              links.back().anchorText = curr_anchorText;  
-                              curr_anchorText.clear();  
-                              }
-                           curr_anchorText.clear();  
-                           }
-                        inAnchor = true;  
-                        p += 6;  
-                        const char *start = p;  
-                        while ( *p != '"' && p < end )
-                           p++;  
-                        url.assign( start, p - start );  
-                        break;  
-                        }
-                     p++;  
-                     }
-                  break;  
+   for (auto i : parser.links) {
+      //TODO: implement a better way to index anchor text
+   }
+   concat = string(&eodMarker);
+   seek = dict.Find(concat, PostingList(concat, Token::EoD));
+   seek->value.appendEODDelta(parser.count + WordsInIndex, DocumentsInIndex);
+   
+   WordsInIndex += parser.count;
+   DocumentsInIndex += 1;
+   documents.push_back(parser.base);
+}
 
-               case DesiredAction::Comment:
-                  while ( p < end - 2 && !( p[ 0 ] == '-' && p[ 1 ] == '-' && p[ 2 ] == '>' ) ) 
-                     p++;  
-                  break;  
+//for utillity
+uint8_t bitsNeeded(const size_t n) {
+    if (n == 0) {
+        return 1; 
+    }
+    return std::max(1, static_cast<int>(std::ceil(std::log2(n + 1))));
+}
 
-               case DesiredAction::DiscardSection:
-                  indiscard = true;  
-                  break;  
+char *formatUtf8(const size_t &delta) {
+   const uint8_t boundary = bitsNeeded(delta);
+   size_t bytes = 0;
+   if (boundary < 7)
+      bytes = 1;
+   else if (boundary < 12)
+      bytes = 2;
+   else if (boundary < 17)
+      bytes = 3;
+   else if (boundary < 22)
+      bytes = 4;
+   else if (boundary < 27)
+      bytes = 5;
+   else if (boundary < 32)
+      bytes = 6;
+   else if (boundary < 37)
+      bytes = 7;
 
-               case DesiredAction::Head:
-                  inHead = true;
-               case DesiredAction::Bold:
-                  inBold = true;
-                  break;
-               case DesiredAction::Italic:
-                  inItalic = true;
-                  break;
-               case DesiredAction::OrdinaryText:
-                  {
-                  const char *start = p - 2;  
-                  while ( p < end - 1 && *p != '<' && !isspace( *p ) && !( p[ 0 ] == '/' && p[ 1 ] == '>' ) )
-                     p++;  
-                  const string word( start, p - start );  
-                  const bool emptyWord = ( p - start ) == 0;  
-
-                  if ( !emptyWord && !indiscard )
-                     {
-                     count++;
-                     if ( inTitle )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !titleWords.empty() )
-                           titleWords.back() += word;  
-                        else 
-                           titleWords.push_back( word );  
-
-                        if ( inAnchor ) 
-                           {
-                           if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                              curr_anchorText.back() += word;  
-                           else
-                              curr_anchorText.push_back( word );  
-                           }
-                        }
-                     else if ( inHead1 )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !head1Words.empty() )
-                           head1Words.back() += word;
-                        else
-                           head1Words.push_back( word );
-                        if ( !isspace( *( start - 1 ) ) && !words.empty() )
-                           words.back() += word;
-                        else
-                           words.push_back( word );
-                        if ( inAnchor )
-                           {
-                           if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                              curr_anchorText.back() += word;
-                           else
-                              curr_anchorText.push_back( word );
-                           }
-                        }
-                     else if ( inHead2 )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !head2Words.empty() )
-                           head2Words.back() += word;
-                        else
-                           head2Words.push_back( word );
-                        if ( !isspace( *( start - 1 ) ) && !words.empty() )
-                           words.back() += word;
-                        else
-                           words.push_back( word );
-                        if ( inAnchor )
-                           {
-                           if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                              curr_anchorText.back() += word;
-                           else
-                              curr_anchorText.push_back( word );
-                           }
-                        }
-                     else if ( inHead3 )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !head3Words.empty() )
-                           head3Words.back() += word;
-                        else
-                           head3Words.push_back( word );
-                        if ( !isspace( *( start - 1 ) ) && !words.empty() )
-                           words.back() += word;
-                        else
-                           words.push_back( word );
-                        if ( inAnchor )
-                           {
-                           if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                              curr_anchorText.back() += word;
-                           else
-                              curr_anchorText.push_back( word );
-                           }
-                        }
-                     else if ( inHead4 )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !head4Words.empty() )
-                           head4Words.back() += word;
-                        else
-                           head4Words.push_back( word );
-                        if ( !isspace( *( start - 1 ) ) && !words.empty() )
-                           words.back() += word;
-                        else
-                           words.push_back( word );
-                        if ( inAnchor )
-                           {
-                           if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                              curr_anchorText.back() += word;
-                           else
-                              curr_anchorText.push_back( word );
-                           }
-                        }
-                     else if ( inHead5 )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !head5Words.empty() )
-                           head5Words.back() += word;
-                        else
-                           head5Words.push_back( word );
-                        if ( !isspace( *( start - 1 ) ) && !words.empty() )
-                           words.back() += word;
-                        else
-                           words.push_back( word );
-                        if ( inAnchor )
-                           {
-                           if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                              curr_anchorText.back() += word;
-                           else
-                              curr_anchorText.push_back( word );
-                           }
-                        }
-                     else if ( inHead6 )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !head6Words.empty() )
-                           head6Words.back() += word;
-                        else
-                           head6Words.push_back( word );
-                        if ( !isspace( *( start - 1 ) ) && !words.empty() )
-                           words.back() += word;
-                        else
-                           words.push_back( word );
-                        if ( inAnchor )
-                           {
-                           if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                              curr_anchorText.back() += word;
-                           else
-                              curr_anchorText.push_back( word );
-                           }
-                        }
-                     else if ( inAnchor )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !curr_anchorText.empty() )
-                           {
-                           curr_anchorText.back() += word;  
-                           words.back() += word;  
-                           } 
-                        else
-                           {
-                           curr_anchorText.push_back( word );  
-                           words.push_back( word );  
-                           }
-                        }
-                     else
-                        {
-                        if ( !isspace( *( start - 1) ) ) 
-                           words.back() += word;  
-                        else 
-                           words.push_back( word );  
-                        }
-                     if ( inBold )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !boldWords.empty() )
-                           boldWords.back() += word;
-                        else
-                           boldWords.push_back( word );
-                        }
-                     else if ( inItalic )
-                        {
-                        if ( !isspace( *( start - 1 ) ) && !italicWords.empty() )
-                           italicWords.back() += word;
-                        else
-                           italicWords.push_back( word );
-                        }
-                     continue;  
-                     }
-                  }
-               default:
-                  break;  
-               }
-            }
-            
-         while ( p < end && *p != '>' ) 
-            p++;  
-         p++;  
-         }
-      else
-         {
-         const char *start = p;  
-         while ( p < end && *p != '<' && !isspace( *p ) && !( p[ 0 ] == '/' && p[ 1 ] == '>' ) )
-            p++;  
-
-         const bool isEmptyWord = ( p - start ) == 0;  
-
-         if ( !isEmptyWord && !indiscard )
-            {
-            auto it = dict.Find(string( start, p - start ));
-            count++;
-            if ( inTitle )
-               {
-               it->value.update(count);
-               if ( inAnchor )
-                  curr_anchorText.emplace_back( start, p - start );  
-               }
-            else if ( inHead )
-               {
-               it->value.update(count, 3);
-               if ( inAnchor )
-                  curr_anchorText.emplace_back( start, p - start );
-               }
-            else if ( inAnchor )
-               {
-               it->value.update(count);
-               it->value.update(count, 0);
-               }
-            else if (!inBold && !inItalic) 
-               {
-               it->value.update(count, 0);
-               } 
-            else if ( inBold )
-               {
-               it->value.update(count, 1);
-               }
-            else if ( inItalic )
-               {
-               it->value.update(count, 2);
-               }
-            }
-         if ( p < end && *p == '<' ) 
-            continue;  
-         else 
-            p++;  
-         }
+   char* bitset = new char[bytes];
+   uint8_t bitsetIndex = 0, initDelta = 0, deltaIndex = 0, index = bytes;
+   
+   while(deltaIndex < boundary) { 
+      if (bitsetIndex % 8 == 0)
+         index--;
+      initDelta = deltaIndex + 6;
+      for (; deltaIndex < initDelta && deltaIndex < boundary; deltaIndex++) {
+         if ((delta >> deltaIndex) & 1)
+            bitset[index] |= 1 << bitsetIndex;
+         bitsetIndex++;
       }
+      if (deltaIndex < boundary) {
+         bitset[index] |= 0 << bitsetIndex;
+         bitset[index] |= 1 << (bitsetIndex + 1);
+         bitsetIndex += 2;
+      }
+      bitsetIndex = bitsetIndex % 8;
    }
+   for (int i = 7; i > 7 - bytes; i--)
+      bitset[0] |= 1 << i;
+
+   return bitset;
+}
+
+void PostingList::appendTitleDelta(const size_t delta) {
+   list.emplace_back(formatUtf8(delta));  
+}
+
+void PostingList::appendBodyDelta(size_t delta, uint8_t style) {
+   delta = delta << 2;
+   delta += style;
+   list.emplace_back(formatUtf8(delta)); 
+}
+
+void PostingList::appendEODDelta(size_t delta, size_t docIndex) {
+   //TODO: tweak how we process these
+   delta = delta << sizeof(docIndex);
+   delta += docIndex;
+   list.emplace_back(formatUtf8(delta));  
+}
