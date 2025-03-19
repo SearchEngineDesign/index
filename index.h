@@ -3,13 +3,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #include <cmath>
 #include <bitset>
+#include <iostream>
 
-#include "../include/string.h"
-#include "../include/vector.h"
-#include "../include/Utf8.h"
-#include "hash/HashTable.h"
+#include "../utils/include/string.h"
+#include "../utils/include/vector.h"
+#include "../utils/Utf8.h"
+#include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
 
 enum class Token {
