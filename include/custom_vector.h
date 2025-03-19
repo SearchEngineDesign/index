@@ -1,4 +1,4 @@
-// vector.h
+// custom_vector.h
 // 
 // Starter file for a vector template
 #pragma once

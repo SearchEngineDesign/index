@@ -1,9 +1,9 @@
 //index.h
-
+#pragma once
 #include <cstddef>
 #include <bitset>
-#include "include/string.h"
-#include "include/vector.h"
+#include "include/custom_string.h"
+#include "include/custom_vector.h"
 
 enum class Token {
     EoD,            //end-of-document token
