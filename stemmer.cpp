@@ -2,6 +2,15 @@
 //stems words
 #include "stemmer.h"
 
+static inline bool isNum(const char c) 
+    {
+    return (c >= '0' && c <= '9');
+    }
+static inline bool isLowerAlpha(const char c)
+    {
+    return (c >= 'a' && c <= 'z');
+    }
+
 string standardize (const string& word)
     {
     utf8proc_uint8_t *result = NULL;
@@ -18,28 +27,71 @@ string standardize (const string& word)
         {
         std::cerr << "utf8proc has encountered an error. Code: " << result_len << std::endl;
         free(result);
-        return string();
+        return word;
         }
     string newWord(result_len);
     for (int i = 0; i < result_len; i++)
         if ( isNum( result[i] ) || isLowerAlpha( result[i] ) )
             newWord.pushBack(result[i]);
-    newWord.pushBack('\0');
     free(result);
     return newWord;
     }
 
-void removeS (string word)
+static inline void removeS (string& word)
     {
-    if( word.substr(-1) != (string)"s" )
+    if ( word.size() < 3 )
         return;
-    if ( word.substr(-4) == (string)"sses" )
+    if ( word.substr(-1) != (string)"s" )
+        return;
+    if (word.substr(-4) == (string)"sses")
         word.popBack(2);
-    if ( word.substr(-3) == (string)"ies" )
+    else if ( word.substr(-3) == (string)"ies" )
         word.popBack(2);
-    if ( word.substr(-2) != (string)"ss" ) //word end guaranteed to be s from above
+    else if ( word.substr(-2) != (string)"ss" ) //word end guaranteed to be s from above
         word.popBack(1);
     }
+
+//
+static inline bool isVowel(const string& word, int i)
+    {
+    if (i < 0)
+        return false;
+    if ( word[i] == 'a' || word[i] == 'o' 
+    || word[i] == 'e' || word[i] == 'i' || word[i] == 'u')
+        return true;
+    if (word[i] == 'y')
+        if ( isVowel( word, i - 1 ) )
+            return false;
+        else
+            return true;
+    return false;
+    }
+
+size_t countM (const string& word)
+    {
+    int size = word.size();
+    int m = 0;
+    bool v;
+    int i = 0;
+    //find first vowel
+    do
+        v = isVowel(word, i++);
+    while (!v && i < size);
+    if (i == size)
+        return 0;
+    for (i; i < size; i++)
+        {
+        bool t = isVowel(word, i);
+        //new vowel sequence, t is vowel, v isn't
+        if (t != v && !v)
+            m++;
+        v = t;       
+        }
+    if ( !v )
+        m++;
+    return m;
+    }
+
 
 //algorithm from Algorithm for Suffix Stripping by M.F. Porter
 string stem (string word) 

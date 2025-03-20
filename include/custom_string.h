@@ -479,10 +479,14 @@ class string
       }
 
       string substr(int pos) const {
-         if ((size_t)pos > m_size)
+         if (pos > static_cast<int>( m_size ) )
             return string();
-         if (pos < 0)
-            return string( m_data + (m_size - pos), ( pos * -1) );
+         if (pos < 0) 
+            {
+            if ( ( pos * -1 ) > m_size )
+               return *this;
+            return string( m_data + m_size + pos, ( pos * -1) );
+            }
          return string(m_data + pos, m_size-pos);
       }
 
@@ -507,6 +511,16 @@ class string
          result.m_data[result.m_size] = '\0';
          return result;
       }
+
+      char& operator[](int i) 
+         {
+         return m_data[i];
+         }
+
+      const char& operator[](int i) const
+         {
+         return m_data[i];
+         }
 
    private:
       size_t m_size;

@@ -10,7 +10,7 @@ std::ostream &operator<<( std::ostream &os, const string &s )
 std::istream &operator>>( std::istream &is, string &s )
    {
    char buffer[1024];
-   is >> buffer;  // Use simple extraction instead of getline
+   is >> buffer;
    s = string(buffer);
    return is;
    }

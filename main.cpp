@@ -10,5 +10,6 @@ int main (int argc, char **argv) {
         string input(buffer);
         string stemmed(stem(input));
         std::cout << stemmed << std::endl;
+        std::cout << countM(input) << std::endl;
     }
 }
