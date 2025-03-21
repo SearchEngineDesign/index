@@ -126,7 +126,7 @@ public:
 
     // Return list's document appearances 
     const size_t getDocCount() const {
-        return list.size();
+        return documentCount;
     }
 
     // Return list's document appearances 
