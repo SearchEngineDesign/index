@@ -2,8 +2,125 @@
 
 #include "index.h"
 
+// read a delta in utf8
+Post IndexHandler::ReadPost() {
+   Utf8 firstByte;
+   read(fd, &firstByte, sizeof(Utf8));
+   size_t length = IndicatedLength(&firstByte);
+   
+   char *post = new char[length];
+   post[0] = static_cast<char>(firstByte);
+   read(fd, post + 1, length - 1);
+
+   Post newPost(post); // this will delete[] post
+
+   return newPost;
+}
+
+
+// Read a string from memory mapped file
+string IndexHandler::ReadString() {
+   size_t sz;
+   read(fd, &sz, sizeof(size_t)); // size of string
+
+   char *cString = new char[sz];
+   for (int i = 0; i < sz; i++)
+      read(fd, &cString[i], sizeof(char)); // content of string
+   
+   string str(cString, sz);
+   delete[] cString;
+
+   return str;
+}
+
+
+// read a posting list
+void IndexHandler::ReadPostingList() {
+
+   size_t useCount;
+   size_t docCount;
+   char type;
+   char junk;
+
+   string token = ReadString(); // associated token
+   read(fd, &junk, sizeof(char));
+
+   read(fd, &useCount, sizeof(size_t)); // use count
+   read(fd, &junk, sizeof(char));
+
+   read(fd, &docCount, sizeof(size_t)); // doc count
+   // TODO: useCount and docCount ??
+   read(fd, &junk, sizeof(char));
+
+   read(fd, &type, sizeof(char)); // type of token
+   read(fd, &junk, sizeof(char));
+
+   PostingList postingList(token, type); // generate empty posting list
+   postingList.setUseCount(useCount);
+
+   read(fd, &postingList.lastPos, sizeof(size_t)); // last appearance position
+   read(fd, &junk, sizeof(char));
+
+   read(fd, &postingList.lastDoc, sizeof(size_t)); // last document appearance
+   read(fd, &junk, sizeof(char));
+
+   // read and generate seek index
+   size_t seekIndex;
+   read(fd, &seekIndex, sizeof(size_t)); // number of seek rows
+   read(fd, &junk, sizeof(char));
+   postingList.setSeekIndex(seekIndex);
+   
+   for (int i = 0; i < seekIndex; i++) {
+      size_t highBit;
+      std::pair<size_t, size_t> seekData;
+      
+      read(fd, &highBit, sizeof(size_t)); // seek row #i
+      read(fd, &junk, sizeof(char));
+
+      read(fd, &seekData.first, sizeof(size_t)); // index of post 
+      read(fd, &junk, sizeof(char));
+
+      read(fd, &seekData.second, sizeof(size_t)); // index of post 
+      read(fd, &junk, sizeof(char));
+
+      postingList.setSeekTable(i, seekData);
+   }
+
+   // Read posts
+   for (int i = 0; i < useCount; i++) {
+      postingList.addPost(ReadPost());
+      read(fd, &junk, sizeof(char));
+   }
+
+   read(fd, &junk, sizeof(char));
+
+   index->setPostingList(token, postingList);
+}
+
+
+// Read entrie index from memory mapped file
 void IndexHandler::ReadIndex() {
- 
+
+   char junk; // store space and endl
+   size_t uniqueTokenNum;
+
+   read(fd, &uniqueTokenNum, sizeof(size_t)); // number of unique tokens
+   read(fd, &junk, sizeof(char));
+   read(fd, &index->WordsInIndex, sizeof(size_t)); // total number of tokens
+   read(fd, &junk, sizeof(char));
+   read(fd, &index->DocumentsInIndex, sizeof(size_t)); // number of documents
+   read(fd, &junk, sizeof(char));
+
+   index->documents.reserve(index->DocumentsInIndex); // document list in index
+   for (int i = 0; i < index->DocumentsInIndex; i++) {
+      index->documents.push_back(ReadString()); // every document in index
+      read(fd, &junk, sizeof(char));
+   }
+   read(fd, &junk, sizeof(char));
+
+   for (int i = 0; i < uniqueTokenNum; i ++) {
+      ReadPostingList(); // posting list itself
+   }
 }
 
 void IndexHandler::WriteString(const string &str) {
@@ -100,7 +217,7 @@ IndexHandler::IndexHandler( const char * filename ) {
    }
    fsize = sb.st_size;
 
-   result = lseek(fd, fsize-1, SEEK_SET);
+   // result = lseek(fd, fsize-1, SEEK_SET);
    /*if (result == -1) {
       WriteIndex();
       close(fd);
@@ -227,4 +344,37 @@ void PostingList::appendEODDelta(size_t &WordsInIndex, const size_t doc) {
    delta += doc;
    list.emplace_back(formatUtf8(delta));  
    UpdateSeek(list.size()-1, WordsInIndex);
+}
+
+
+int main() {
+   IndexHandler ih("testPL");
+   Index *index = ih.index;
+
+   std::cout << index->WordsInIndex << " " << index->DocumentsInIndex << std::endl;
+
+   for (int i = 0; i < index->documents.size(); i ++) {
+      std::cout << index->documents[i] << " ";
+   }
+   std::cout << std::endl;
+
+   HashTable<string, PostingList> *dict = index->getDict();
+
+   for (auto it = dict->begin(); it != dict->end(); it ++) {
+      PostingList pl = it->value;
+
+      // std::cout << "token: " << pl.getIndex() << std::endl;
+      // std::cout << "use count: " << pl.getUseCount() << std::endl;
+      // std::cout << "type: " << pl.getType() << std::endl;
+      if (pl.getType() != 'u') {
+         std::cout << "token: " << pl.getIndex() << std::endl;
+      }
+      // vector<Post> *list = pl.getList();
+      // for (int i = 0; i < list.size(); i ++) {
+      //    Post p = list[i];
+      //    std::cout << p << " "; // TODO
+      // }
+   
+   }
+
 }
