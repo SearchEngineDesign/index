@@ -215,7 +215,10 @@ class string
             // assert ( i < m_size );
             return m_data[i];
          }
-
+      const char &operator[](int i)
+         {
+         return m_data[i];
+         }
       // string Append
       // REQUIRES: Nothing
       // MODIFIES: *this
@@ -511,16 +514,6 @@ class string
          result.m_data[result.m_size] = '\0';
          return result;
       }
-
-      char& operator[](int i) 
-         {
-         return m_data[i];
-         }
-
-      const char& operator[](int i) const
-         {
-         return m_data[i];
-         }
 
    private:
       size_t m_size;
