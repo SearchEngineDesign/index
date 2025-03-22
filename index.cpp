@@ -3,7 +3,7 @@
 #include "index.h"
 
 // read a delta in utf8
-Post IndexHandler::ReadPost() {
+Post IndexReadHandler::ReadPost() {
    Utf8 firstByte;
    read(fd, &firstByte, sizeof(Utf8));
    size_t length = IndicatedLength(&firstByte);
@@ -19,7 +19,7 @@ Post IndexHandler::ReadPost() {
 
 
 // Read a string from memory mapped file
-string IndexHandler::ReadString() {
+string IndexReadHandler::ReadString() {
    size_t sz;
    read(fd, &sz, sizeof(size_t)); // size of string
 
@@ -35,7 +35,7 @@ string IndexHandler::ReadString() {
 
 
 // read a posting list
-void IndexHandler::ReadPostingList() {
+void IndexReadHandler::ReadPostingList() {
 
    size_t useCount;
    size_t docCount;
@@ -99,7 +99,7 @@ void IndexHandler::ReadPostingList() {
 
 
 // Read entrie index from memory mapped file
-void IndexHandler::ReadIndex() {
+void IndexReadHandler::ReadIndex() {
 
    char junk; // store space and endl
    size_t uniqueTokenNum;
@@ -123,18 +123,18 @@ void IndexHandler::ReadIndex() {
    }
 }
 
-void IndexHandler::WriteString(const string &str) {
+void IndexWriteHandler::WriteString(const string &str) {
    size_t sz = str.length();
    write(fd, &sz, sizeof(size_t)); // size of string
    for (int i = 0; i < sz; i++) 
       write(fd, str.at(i), sizeof(char)); // content of string
 }
 
-void IndexHandler::WritePost(const Post &post) {
+void IndexWriteHandler::WritePost(const Post &post) {
    write(fd, post.getData(), post.length());
 }
 
-void IndexHandler::WritePostingList(const PostingList &list) {
+void IndexWriteHandler::WritePostingList(const PostingList &list) {
 
    size_t useCount = list.getUseCount();
    size_t docCount = list.getDocCount();
@@ -177,7 +177,7 @@ void IndexHandler::WritePostingList(const PostingList &list) {
    write(fd, &endl, sizeof(char));
 }
 
-void IndexHandler::WriteIndex() {
+void IndexWriteHandler::WriteIndex() {
    HashTable<string, PostingList> *dict = index->getDict();
    size_t n = dict->getKeyCount();
 
@@ -231,8 +231,7 @@ IndexHandler::IndexHandler( const char * filename ) {
       std::cerr << "Error mapping index file";
       exit(EXIT_FAILURE);
    } */
-   
-   ReadIndex();
+
 }
 
 void Index::addDocument(HtmlParser &parser) {
@@ -296,6 +295,7 @@ char *formatUtf8(const size_t &delta) {
       bytes = 5;
    else if (boundary < 32)
       bytes = 6;
+   // TODO: capable of encoding 31 bits ( Utf-32 ) but only Unicode in common use
    else if (boundary < 37)
       bytes = 7;
 
@@ -326,7 +326,7 @@ char *formatUtf8(const size_t &delta) {
 
 void PostingList::appendTitleDelta(size_t &WordsInIndex, size_t &doc) {
    size_t delta = Delta(WordsInIndex, doc);
-   list.emplace_back(formatUtf8(delta));
+   list.emplace_back(formatUtf8(delta)); // TODO: memory leak?
    UpdateSeek(list.size()-1, WordsInIndex);
 }
 
@@ -344,37 +344,4 @@ void PostingList::appendEODDelta(size_t &WordsInIndex, const size_t doc) {
    delta += doc;
    list.emplace_back(formatUtf8(delta));  
    UpdateSeek(list.size()-1, WordsInIndex);
-}
-
-
-int main() {
-   IndexHandler ih("testPL");
-   Index *index = ih.index;
-
-   std::cout << index->WordsInIndex << " " << index->DocumentsInIndex << std::endl;
-
-   for (int i = 0; i < index->documents.size(); i ++) {
-      std::cout << index->documents[i] << " ";
-   }
-   std::cout << std::endl;
-
-   HashTable<string, PostingList> *dict = index->getDict();
-
-   for (auto it = dict->begin(); it != dict->end(); it ++) {
-      PostingList pl = it->value;
-
-      // std::cout << "token: " << pl.getIndex() << std::endl;
-      // std::cout << "use count: " << pl.getUseCount() << std::endl;
-      // std::cout << "type: " << pl.getType() << std::endl;
-      if (pl.getType() != 'u') {
-         std::cout << "token: " << pl.getIndex() << std::endl;
-      }
-      // vector<Post> *list = pl.getList();
-      // for (int i = 0; i < list.size(); i ++) {
-      //    Post p = list[i];
-      //    std::cout << p << " "; // TODO
-      // }
-   
-   }
-
 }

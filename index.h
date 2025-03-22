@@ -304,34 +304,59 @@ public:
    Index *index;
    IndexHandler() {};
    IndexHandler( const char * filename );
-   ~IndexHandler() { // TODO
-      // WriteIndex();
-      // if (msync(map, fsize, MS_SYNC) == -1) {
-      //    perror("Error syncing memory to file");
-      //    munmap(map, fsize);
-      // }
-      // if (munmap(map, fsize == -1)) {
-      //    perror("Error un-mmapping the file");
-      // }
-      // close(fd);
-      
-      close(fd);
-   };
+   virtual ~IndexHandler() {}
 
-private:
+protected:
    int fd;
    void *map;
    int fsize = 0;
-   void WriteString(const string &str);
-   void WritePost(const Post &post);
-   void WritePostingList(const PostingList &list);
-   void WriteIndex();
-   Post ReadPost();
-   void ReadPostingList();
-   string ReadString();
-   void ReadIndex();
 
    char space = ' ';
    char endl = '\n';
    string EoF = "%";
+};
+
+
+class IndexWriteHandler : public IndexHandler 
+{
+public:
+   IndexWriteHandler() {}
+   IndexWriteHandler( const char * filename ) : IndexHandler( filename ) {  }
+
+   ~IndexWriteHandler() override {
+      WriteIndex();
+      if (msync(map, fsize, MS_SYNC) == -1) {
+         perror("Error syncing memory to file");
+         munmap(map, fsize);
+      }
+      if (munmap(map, fsize == -1)) {
+         perror("Error un-mmapping the file");
+      }
+      close(fd);
+   }
+
+private:
+   void WriteString(const string &str);
+   void WritePost(const Post &post);
+   void WritePostingList(const PostingList &list);
+   void WriteIndex();
+};
+
+
+class IndexReadHandler : public IndexHandler 
+{
+public:
+   IndexReadHandler() {}
+   IndexReadHandler( const char * filename ) : IndexHandler( filename ) {  }
+
+   ~IndexReadHandler() override {
+      close(fd);
+   }
+
+   void ReadIndex();
+
+private:
+   Post ReadPost();
+   void ReadPostingList();
+   string ReadString();
 };
