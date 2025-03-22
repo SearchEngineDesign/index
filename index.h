@@ -236,6 +236,7 @@ public:
    // last document this word occured in
    size_t lastDoc = -1;
 
+
 private:
 
     //Common header
