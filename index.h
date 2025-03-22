@@ -64,6 +64,13 @@ public:
       delete[] data_in;
    }
 
+   // copy constructor
+   Post(const Post& other) {
+      int bytes = get_bytes(other.data[0]);
+      data = new char[bytes];
+      std::memcpy(data, other.data, bytes);
+   }
+
    ~Post() {
       if (data != nullptr)
          delete[] data;
@@ -128,14 +135,19 @@ public:
       switch (type_in) {
          case 'e':
             type = Token::EoD;
+            break;
          case 'a':
             type = Token::Anchor;
+            break;
          case 'b':
             type = Token::Body;
+            break;
          case 't':
             type = Token::Title;
+            break;
          case 'u':
             type = Token::URL;
+            break;
       }
 
    }
@@ -249,6 +261,7 @@ private:
          seekIndex++;
       }
    }
+
 
 };
 
