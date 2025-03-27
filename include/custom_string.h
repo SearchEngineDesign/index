@@ -215,10 +215,11 @@ class string
             // assert ( i < m_size );
             return m_data[i];
          }
-      const char &operator[](int i)
+      const char &operator[](size_t i) const
          {
          return m_data[i];
          }
+      
       // string Append
       // REQUIRES: Nothing
       // MODIFIES: *this

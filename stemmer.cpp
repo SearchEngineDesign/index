@@ -41,9 +41,10 @@ static inline bool oCheck(const string& word)
     {
     if (word.size() < 3)
         return false;
-    if ( *word.end() == 'x' || *word.end() == 'y' || *word.end() == 'w' )
+        int end = word.size() - 1;
+    char last = word[end];
+    if ( last == 'x' || last == 'y' || last == 'w' )
         return false;
-    int end = word.size() - 1;
     if( !isVowel(word, end - 2) && isVowel(word, end - 1) && !isVowel(word, end) )
         return true;
     else
@@ -176,6 +177,8 @@ static inline void step2 (string& word)
     //if else if statement hell
     //could map it but uh I'm lazy
     int size = word.size();
+    if ( size < 3 )
+        return;
     if (size > 7)
         {
         const string temp = word.substr(-7);
@@ -207,20 +210,203 @@ static inline void step2 (string& word)
             return;
             }
         }
-    if (word.substr(-6) == (string)"biliti")
+    if (size > 6)
         {
-        word.popBack(5);
-        word += (string)"le";
-        return;
+        const string temp = word.substr(-6);
+        if (temp == (string)"biliti")
+            {
+            word.popBack(5);
+            word += (string)"le";
+            return;
+            }
+        else if (temp == (string)"tional")
+            {
+            word.popBack(2);
+            return;
+            }
         }
     if (size > 5)
         {
-        
+        const string temp = word.substr(-5);
+        if ( temp == (string)"entli" )
+            {
+            word.popBack(2);
+            return;
+            }
+        else if ( temp == (string)"alism")
+            {
+            word.popBack(3);
+            return;
+            }
+        else if ( temp == (string)"ation")
+            {
+            word.popBack(2);
+            word[word.size() - 1] = 'e';
+            return;
+            }
+        else if ( temp == (string)"aliti")
+            {
+            word.popBack(3);
+            return;
+            }
+        else if ( temp == (string)"iviti" )
+            {
+            word.popBack(2);
+            word[word.size() - 1] = 'e';
+            return;
+            }
+        else if ( temp == (string)"ousli" )
+            {
+            word.popBack(2);
+            }
         }
-
-    
+    if (size > 4) 
+        {
+        const string temp = word.substr(-4);
+        if ( temp == (string)"enci" )
+            word[word.size() - 1] = 'e';
+        else if ( temp == (string)"anci" )
+            word[word.size() - 1] = 'e';
+        else if ( temp == (string)"izer" )
+            word.popBack();
+        else if ( temp == (string)"abli" )
+            word[word.size() - 1] = 'e';
+        else if ( temp == (string)"alli" )
+            word.popBack(2);
+        else if ( temp == (string)"ator" )
+            {
+            word.popBack();
+            word[word.size() - 1] = 'e';
+            }
+        }
+    if (word.substr(-3) == (string)"eli")
+        word.popBack(2);
+    return;
+    }
+static inline void step3( string &word )
+    {
+    size_t size = word.size();
+    if (size < 3)
+        return;
+    if (size > 5)
+        {
+        const string temp = word.substr(-5);
+        if (temp == (string)"icate")
+            {
+            word.popBack(3);
+            return;
+            }
+        else if (temp == (string)"ative")
+            {
+            word.popBack(5);
+            return;
+            }
+        else if (temp == (string)"alize")
+            {
+            word.popBack(3);
+            return;
+            }
+        else if (temp == (string)"iciti")
+            {
+            word.popBack(3);
+            return;
+            }
+        }
+    if (size > 4)
+        {
+        const string temp = word.substr(-4);
+        if (temp == (string)"ical")
+            {
+            word.popBack(2);
+            return;
+            }
+        else if (temp == (string)"ness")
+            {
+            word.popBack(4);
+            return;
+            }
+        }
+    if (word.substr(-3) == (string)"ful")
+        word.popBack(3);
+    return;
+    }
+static inline void step4 ( string &word )
+    {
+    size_t size = word.size();
+    if (size < 1)
+        return;
+    if (size > 5)
+        {
+        const string temp = word.substr(-5);
+        if (temp == (string)"ement")
+            {
+            word.popBack(5);
+            }
+        }
+    if (size > 4)
+        {
+        const string temp = word.substr(-4);
+        if (temp == (string)"ance" || temp == (string)"ence" || temp == (string)"able" || 
+        temp == (string)"ible" || temp == (string)"ment")
+            {
+            word.popBack(4);
+            return;
+            }   
+        else if (temp == (string)"tion" || temp == (string)"sion")
+            {
+            word.popBack(3);
+            return;
+            }
+        }
+    if (size > 3)
+        {
+        const string temp = word.substr(-3);
+        if (temp == (string)"ant" || temp == (string)"ent" || temp == (string)"ism" || temp == (string)"ate" 
+        || temp == (string)"iti" || temp == (string)"ous" || temp == (string)"ive" || temp == (string)"ize")
+            {
+            word.popBack(3);
+            return;
+            }   
+        }
+    if (size > 2)
+        {
+        const string temp = word.substr(-2);
+        if (temp == (string)"al" || temp == (string)"er" || temp == (string)"ic" || temp == (string)"ou")
+            {
+            word.popBack(2);
+            return;
+            }
+        }
     }
 
+static inline void step5a(string& word, size_t m)
+    {
+    size_t size = word.size();
+    if (size < 3)
+        return;
+    if (word.substr(-1) == (string)"e")
+        {
+        word.popBack(1);
+        return;
+        }
+    if (m == 1)
+        {
+        const string temp = word.substr(size - 1);
+        if (!oCheck(temp) && word[size - 1] == 'e')
+            word.popBack(1);
+        }
+    return;
+    }
+
+static inline void step5b(string& word)
+    {
+    size_t size = word.size();
+    if (size < 3)
+        return;
+    if (word.substr(-1) == (string)"l" && word.substr(-2) == (string)"ll")
+        word.popBack(1);
+    return;
+    }
 
 //algorithm from Algorithm for Suffix Stripping by M.F. Porter
 string stem (string word) 
@@ -231,6 +417,15 @@ string stem (string word)
     step1b(word, m);
     step1c(word);
     if (m > 0)
+        {
         step2(word);
+        step3(word);
+        }
+    if (m > 1)
+        {
+        step4(word);
+        step5a(word, m);
+        step5b(word);
+        }
     return word;
     }
