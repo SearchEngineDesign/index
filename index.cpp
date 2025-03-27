@@ -49,7 +49,6 @@ void IndexReadHandler::ReadPostingList() {
    read(fd, &junk, sizeof(char));
 
    read(fd, &docCount, sizeof(size_t)); // doc count
-   // TODO: useCount and docCount ??
    read(fd, &junk, sizeof(char));
 
    read(fd, &type, sizeof(char)); // type of token
@@ -57,6 +56,7 @@ void IndexReadHandler::ReadPostingList() {
 
    PostingList postingList(token, type); // generate empty posting list
    postingList.setUseCount(useCount);
+   postingList.setDocCount(docCount);
 
    read(fd, &postingList.lastPos, sizeof(size_t)); // last appearance position
    read(fd, &junk, sizeof(char));
@@ -113,11 +113,11 @@ void IndexReadHandler::ReadIndex() {
 
    index->documents.reserve(index->DocumentsInIndex); // document list in index
    for (int i = 0; i < index->DocumentsInIndex; i++) {
-      index->documents.push_back(ReadString()); // every document in index
+      index->documents.pushBack(ReadString()); // every document in index
       read(fd, &junk, sizeof(char));
    }
    read(fd, &junk, sizeof(char));
-
+   std::cout << uniqueTokenNum << std::endl;
    for (int i = 0; i < uniqueTokenNum; i ++) {
       ReadPostingList(); // posting list itself
    }
@@ -268,7 +268,7 @@ void Index::addDocument(HtmlParser &parser) {
    seek->value.appendEODDelta(WordsInIndex, DocumentsInIndex);
    
    DocumentsInIndex += 1;
-   documents.push_back(parser.base);
+   documents.pushBack(parser.base);
    std::cout << WordsInIndex << std::endl;
 }
 
@@ -326,7 +326,7 @@ char *formatUtf8(const size_t &delta) {
 
 void PostingList::appendTitleDelta(size_t &WordsInIndex, size_t &doc) {
    size_t delta = Delta(WordsInIndex, doc);
-   list.emplace_back(formatUtf8(delta)); // TODO: memory leak?
+   list.emplace_back(formatUtf8(delta)); // TODO: memory leak? change to Utf8.h, unsigned char vs char
    UpdateSeek(list.size()-1, WordsInIndex);
 }
 
