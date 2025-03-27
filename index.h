@@ -1,4 +1,5 @@
 //index.h
+#pragma once
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -9,8 +10,8 @@
 #include <iostream>
 #include <cstring>
 
-#include "../utils/include/string.h"
-#include "../utils/include/vector.h"
+#include "../utils/string.h"
+#include "../utils/vector.h"
 #include "../utils/Utf8.h"
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
@@ -217,6 +218,11 @@ public:
       list.reserve(n);
    }
 
+   // set document count
+   void setDocCount(const size_t docCount) {
+      documentCount = docCount;
+   }
+
    // set row i of seek table
    void setSeekTable(const size_t & i, const std::pair<size_t, size_t> & pair) {
       SeekTable[i] = pair;
@@ -287,6 +293,27 @@ public:
    void setPostingList(const string & str, const PostingList & pl) {
       dict.Find(str, pl);
    }
+
+   // // open ISR
+   // ISRWord *OpenISRWord( char *word ) {
+   //    ISRWord *isrWord = new ISRWord;
+   //    PostingList *postingList = &dict[word]; // TODO: deal with word
+
+   //    isrWord->SetPostingList(postingList);
+
+   //    return isrWord;
+   // }
+
+   // ISRWord *OpenISREndDoc( ) {
+   //    ISRWord* ISREndDoc = new ISRWord;
+
+   //    const vector<Post> *list = dict["%"].getList();
+   //    ISREndDoc->SetCurrentPost(&list[0]);
+
+   //    // TODO: SetDocumentLength, SetTitleLength, SetUrlLength
+
+   //    return ISREndDoc;
+   // }
 
 private:
 
