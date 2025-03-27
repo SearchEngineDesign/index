@@ -9,8 +9,8 @@
 #include <iostream>
 #include <cstring>
 
-#include "../utils/include/string.h"
-#include "../utils/include/vector.h"
+#include "../utils/string.h"
+#include "../utils/vector.h"
 #include "../utils/Utf8.h"
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
