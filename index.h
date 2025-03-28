@@ -17,6 +17,8 @@
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
 
+const int MAX_CHUNKS = 4096;
+const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
 
 enum class Token {
     EoD,            //end-of-document token
@@ -246,6 +248,7 @@ public:
 
 
 private:
+   friend class HashBlob;
 
     //Common header
     size_t documentCount;   //number of documents containing token
@@ -260,7 +263,7 @@ private:
    vector<Post> list;
 
     //Current magnitude of the SeekIndex for this PostingList
-   size_t seekIndex = 0;
+   uint8_t seekIndex = 0;
     //Seek list
     // Array of size_t pairs -- the first is the index of the post in list, the second is its real location
    std::pair<size_t, size_t> SeekTable[256];
@@ -296,27 +299,6 @@ public:
       dict.Find(str, pl);
    }
 
-   // // open ISR
-   // ISRWord *OpenISRWord( char *word ) {
-   //    ISRWord *isrWord = new ISRWord;
-   //    PostingList *postingList = &dict[word]; // TODO: deal with word
-
-   //    isrWord->SetPostingList(postingList);
-
-   //    return isrWord;
-   // }
-
-   // ISRWord *OpenISREndDoc( ) {
-   //    ISRWord* ISREndDoc = new ISRWord;
-
-   //    const vector<Post> *list = dict["%"].getList();
-   //    ISREndDoc->SetCurrentPost(&list[0]);
-
-   //    // TODO: SetDocumentLength, SetTitleLength, SetUrlLength
-
-   //    return ISREndDoc;
-   // }
-
 private:
 
    HashTable<string, PostingList> dict;
@@ -335,12 +317,11 @@ public:
    Index *index;
    IndexHandler() {};
    IndexHandler( const char * foldername );
+   void IndexHandler::UpdateIH();
    virtual ~IndexHandler() {}
 
-   const int MAX_CHUNKS = 4096;
-   const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
-
 protected:
+   const char * folder;
    int fd;
    void *map;
    int fsize = 0;
@@ -355,7 +336,23 @@ class IndexWriteHandler : public IndexHandler
 {
 public:
    IndexWriteHandler() {}
-   IndexWriteHandler( const char * filename ) : IndexHandler( filename ) {  }
+   IndexWriteHandler( const char * foldername ) : IndexHandler( foldername ) {  }
+
+   void addDocument(HtmlParser &parser) {
+      index->addDocument(parser);
+      if (sizeof(index) > MAX_INDEX_SIZE) {
+         WriteIndex();
+         if (msync(map, fsize, MS_SYNC) == -1) {
+            perror("Error syncing memory to file");
+            munmap(map, fsize);
+         }
+         if (munmap(map, fsize == -1)) {
+            perror("Error un-mmapping the file");
+         }
+         close(fd);
+         UpdateIH();
+      }
+   }
 
    ~IndexWriteHandler() override {
       WriteIndex();

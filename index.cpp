@@ -136,45 +136,6 @@ void IndexWriteHandler::WritePost(const Post &post) {
 
 void IndexWriteHandler::WritePostingList(const PostingList &list) {
 
-   size_t useCount = list.getUseCount();
-   size_t docCount = list.getDocCount();
-   char type = list.getType();
-   WriteString(list.getIndex()); // associated token
-   write(fd, &endl, sizeof(char));
-   write(fd, &useCount, sizeof(size_t)); // use count
-   write(fd, &space, sizeof(char));
-   write(fd, &docCount, sizeof(size_t)); // doc count
-   write(fd, &space, sizeof(char));
-   write(fd, &type, sizeof(char)); // type of token
-   write(fd, &space, sizeof(char));
-   write(fd, &list.lastPos, sizeof(size_t)); // last appearance position
-   write(fd, &space, sizeof(char));
-   write(fd, &list.lastDoc, sizeof(size_t)); // last document appearance
-   write(fd, &endl, sizeof(char));
-
-   size_t seekIndex = list.getSeekIndex();
-   const std::pair<size_t, size_t> * seekTable = list.getSeekTable();
-   write(fd, &seekIndex, sizeof(size_t)); // number of seek rows
-   write(fd, &endl, sizeof(char));
-   
-   for (int i = 0; i < seekIndex; i++) {
-      size_t highBit = 1 << i;
-      write(fd, &highBit, sizeof(size_t)); // seek row #i
-      write(fd, &space, sizeof(char));
-      write(fd, &seekTable[i].first, sizeof(size_t)); // index of post 
-      write(fd, &space, sizeof(char));
-      write(fd, &seekTable[i].second, sizeof(size_t)); // index of post 
-      write(fd, &endl, sizeof(char));
-   }
-
-   const vector<Post> *pl = list.getList();
-
-   for (int i = 0; i < useCount; i++) {
-      WritePost(pl->operator[](i));
-      write(fd, &space, sizeof(char));
-   }
-
-   write(fd, &endl, sizeof(char));
 }
 
 void IndexWriteHandler::WriteIndex() {
@@ -214,11 +175,8 @@ string nextChunk( const char * foldername) {
    return string(foldername) + string("/") +  string(newFile);
 }
 
-IndexHandler::IndexHandler( const char * foldername ) {
-   int result;
-   index = new Index();
-
-   string fname = nextChunk(foldername);
+void IndexHandler::UpdateIH() {
+   string fname = nextChunk(folder);
 
    fd = open(fname.c_str(), O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
    if (fd == -1) {
@@ -233,45 +191,38 @@ IndexHandler::IndexHandler( const char * foldername ) {
       exit(1);
    }
    fsize = sb.st_size;
+}
 
-   // result = lseek(fd, fsize-1, SEEK_SET);
-   /*if (result == -1) {
-      WriteIndex();
-      close(fd);
-      perror("Error calling lseek(): no index in file");
-      exit(1);
-   }
+IndexHandler::IndexHandler( const char * foldername ) {
+   int result;
+   index = new Index();
 
-   map = mmap(nullptr, fsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-   if (map == MAP_FAILED) {
-      close(fd);
-      std::cerr << "Error mapping index file";
-      exit(EXIT_FAILURE);
-   } */
+   folder = foldername;
 
+   UpdateIH();
 }
 
 void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
-   for (auto i : parser.bodyWords) {
+   for (auto &i : parser.bodyWords) {
       seek = dict.Find(i, PostingList(i, Token::Body));
       seek->value.appendBodyDelta(WordsInIndex, 0, DocumentsInIndex);
    }
-   for (auto i : parser.headWords) {
+   for (auto &i : parser.headWords) {
       seek = dict.Find(i, PostingList(i, Token::Body));
       seek->value.appendBodyDelta(WordsInIndex, 1, DocumentsInIndex);
    }
-   for (auto i : parser.titleWords) {
+   for (auto &i : parser.titleWords) {
       concat = string(&titleMarker) + i;
       seek = dict.Find(concat, PostingList(concat, Token::Title));
       seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
 
    }
-   for (auto i : parser.links) {
+   for (auto &i : parser.links) {
       //TODO: implement a better way to index anchor text
-      for (int j = 0; j < i.anchorText.size(); j++) {
-         concat = string(&anchorMarker) + i.anchorText[j];
+      for (auto &j : i.anchorText) {
+         concat = string(&anchorMarker) + j;
          seek = dict.Find(concat, PostingList(concat, Token::Anchor));
          seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
       }
@@ -286,7 +237,6 @@ void Index::addDocument(HtmlParser &parser) {
    
    DocumentsInIndex += 1;
    documents.push_back(parser.base);
-   std::cout << WordsInIndex << std::endl;
 }
 
 //for utillity
