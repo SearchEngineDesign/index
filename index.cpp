@@ -199,11 +199,28 @@ void IndexWriteHandler::WriteIndex() {
    }
 }
 
-IndexHandler::IndexHandler( const char * filename ) {
+string nextChunk( const char * foldername) {
+   char * out;
+   const char * lastFile = "";
+   for (const auto& entry : std::__fs::filesystem::directory_iterator(foldername)) {
+      lastFile = entry.path().filename().c_str();
+   }
+   if (*lastFile == '\0')
+      return string(foldername) + string("/") + string("0");
+   int num = atoi(lastFile);
+   num += 1;
+   char * newFile;
+   sprintf(newFile, "%d", num);
+   return string(foldername) + string("/") +  string(newFile);
+}
+
+IndexHandler::IndexHandler( const char * foldername ) {
    int result;
    index = new Index();
 
-   fd = open(filename, O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
+   string fname = nextChunk(foldername);
+
+   fd = open(fname.c_str(), O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
    if (fd == -1) {
       std::cerr << "Error opening index file";
 	   exit(1);

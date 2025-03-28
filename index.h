@@ -9,6 +9,7 @@
 #include <bitset>
 #include <iostream>
 #include <cstring>
+#include <filesystem>
 
 #include "../utils/string.h"
 #include "../utils/vector.h"
@@ -241,7 +242,7 @@ public:
    // last position this word occured at
    size_t lastPos = 0;
    // last document this word occured in
-   size_t lastDoc = -1;
+   size_t lastDoc = 0;
 
 
 private:
@@ -330,10 +331,14 @@ private:
 
 class IndexHandler {
 public:
+
    Index *index;
    IndexHandler() {};
-   IndexHandler( const char * filename );
+   IndexHandler( const char * foldername );
    virtual ~IndexHandler() {}
+
+   const int MAX_CHUNKS = 4096;
+   const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
 
 protected:
    int fd;
