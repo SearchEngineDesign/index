@@ -16,8 +16,6 @@
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
 
-using utils::string;
-using utils::vector;
 
 enum class Token {
     EoD,            //end-of-document token
@@ -237,7 +235,7 @@ public:
    }
 
    void addPost(const Post & p) {
-      list.pushBack(p);
+      list.push_back(p);
    }
 
    // last position this word occured at

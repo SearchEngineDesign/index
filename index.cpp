@@ -113,7 +113,7 @@ void IndexReadHandler::ReadIndex() {
 
    index->documents.reserve(index->DocumentsInIndex); // document list in index
    for (int i = 0; i < index->DocumentsInIndex; i++) {
-      index->documents.pushBack(ReadString()); // every document in index
+      index->documents.push_back(ReadString()); // every document in index
       read(fd, &junk, sizeof(char));
    }
    read(fd, &junk, sizeof(char));
@@ -268,7 +268,7 @@ void Index::addDocument(HtmlParser &parser) {
    seek->value.appendEODDelta(WordsInIndex, DocumentsInIndex);
    
    DocumentsInIndex += 1;
-   documents.pushBack(parser.base);
+   documents.push_back(parser.base);
    std::cout << WordsInIndex << std::endl;
 }
 
