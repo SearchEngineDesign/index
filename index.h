@@ -1,6 +1,9 @@
 //index.h
 #pragma once
 
+#ifndef INDEX_H
+#define INDEX_H
+
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -19,6 +22,9 @@
 
 const int MAX_CHUNKS = 4096;
 const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
+
+class IndexBlob;
+class SerialTuple;
 
 enum class Token {
     EoD,            //end-of-document token
@@ -129,13 +135,10 @@ public:
     void appendEODDelta(size_t &WordsInIndex, const size_t doc); //EOF token
 
    //Construct empty posting list for string str_in
-   PostingList(string &str_in, Token type_in) : 
-               token(str_in), type(type_in) {}
+   PostingList(Token type_in) : type(type_in) {}
 
    //Construct empty posting list for string str_in and type
-   PostingList(string &str_in, char type_in) {
-
-      token = str_in;
+   PostingList(char type_in) {
 
       switch (type_in) {
          case 'e':
@@ -183,11 +186,6 @@ public:
          default:
                return '0';
       }
-   }
-
-   // Return list's token
-   string getIndex() const {
-      return token;
    }
 
    // Get ptr to actual post list
@@ -247,17 +245,22 @@ public:
    size_t lastDoc = 0;
 
 
+   bool operator<(const PostingList& other) const {
+      return this->list.size() > other.list.size();
+   }
+
+   bool operator>(const PostingList& other) const {
+      return this->list.size() < other.list.size();
+   }
+
 private:
-   friend class HashBlob;
+   friend class IndexBlob;
 
     //Common header
     size_t documentCount;   //number of documents containing token
     Token type;             //variety of token
 
     //Type-specific data
-
-    //Token
-   string token;
 
     //Posts
    vector<Post> list;
@@ -290,7 +293,11 @@ public:
 
    Index() {}
 
-   HashTable<string, PostingList> *getDict() {
+   const vector<string> *getDocuments() const {
+      return &documents;
+   }
+
+   const HashTable<string, PostingList> *getDict() const {
       return &dict;
    }
 
@@ -317,10 +324,15 @@ public:
    Index *index;
    IndexHandler() {};
    IndexHandler( const char * foldername );
-   void IndexHandler::UpdateIH();
+   void UpdateIH();
    virtual ~IndexHandler() {}
 
+   string &getFilename() {
+      return fileString;
+   }
+
 protected:
+   string fileString;
    const char * folder;
    int fd;
    void *map;
@@ -340,7 +352,9 @@ public:
 
    void addDocument(HtmlParser &parser) {
       index->addDocument(parser);
-      if (sizeof(index) > MAX_INDEX_SIZE) {
+      // TODO: sizeof() is not accurate
+      size_t sz = sizeof(*index);
+      if (sz > MAX_INDEX_SIZE) {
          WriteIndex();
          if (msync(map, fsize, MS_SYNC) == -1) {
             perror("Error syncing memory to file");
@@ -366,11 +380,12 @@ public:
       close(fd);
    }
 
+   void WriteIndex();
+
 private:
    void WriteString(const string &str);
    void WritePost(const Post &post);
    void WritePostingList(const PostingList &list);
-   void WriteIndex();
 };
 
 
@@ -384,10 +399,23 @@ public:
       close(fd);
    }
 
-   void ReadIndex();
+   const SerialTuple *Find( const char *key );
+
+   void ReadIndex(const char * fname);
+
+   const IndexBlob* getBlob() {
+      return blob;
+   }
 
 private:
-   Post ReadPost();
-   void ReadPostingList();
-   string ReadString();
+   struct stat fileInfo;
+   size_t FileSize( int f )
+      {
+      fstat( f, &fileInfo );
+      return fileInfo.st_size;
+      }
+
+   IndexBlob* blob;
 };
+
+#endif

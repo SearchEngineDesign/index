@@ -1,183 +1,63 @@
 //index.cpp
 
 #include "index.h"
+#include "../utils/IndexBlob.h"
 
-// read a delta in utf8
-Post IndexReadHandler::ReadPost() {
-   Utf8 firstByte;
-   read(fd, &firstByte, sizeof(Utf8));
-   size_t length = IndicatedLength(&firstByte);
-   
-   char *post = new char[length];
-   post[0] = static_cast<char>(firstByte);
-   read(fd, post + 1, length - 1);
-
-   Post newPost(post); // this will delete[] post
-
-   return newPost;
+const SerialTuple *IndexReadHandler::Find(const char * key) {
+   const SerialTuple *tup = blob->Find(key);
+   const SerialPostingList *pl = tup->Value();
+   // do whatever with the SPL
+   const SerialPost* p = pl->getPost(0);
+   return tup;
 }
 
+// Read entire index from memory mapped file
+void IndexReadHandler::ReadIndex(const char * fname) {
+   // Open the file for reading, map it, check the header,
+   // and note the blob address.
+   fd = open(fname, O_RDONLY);
 
-// Read a string from memory mapped file
-string IndexReadHandler::ReadString() {
-   size_t sz;
-   read(fd, &sz, sizeof(size_t)); // size of string
+   if (fd == -1) 
+      perror("open");
 
-   char *cString = new char[sz];
-   for (int i = 0; i < sz; i++)
-      read(fd, &cString[i], sizeof(char)); // content of string
-   
-   string str(cString, sz);
-   delete[] cString;
+   if (FileSize(fd) == -1) //get file size
+      perror("fstat");
 
-   return str;
-}
-
-
-// read a posting list
-void IndexReadHandler::ReadPostingList() {
-
-   size_t useCount;
-   size_t docCount;
-   char type;
-   char junk;
-
-   string token = ReadString(); // associated token
-   read(fd, &junk, sizeof(char));
-
-   read(fd, &useCount, sizeof(size_t)); // use count
-   read(fd, &junk, sizeof(char));
-
-   read(fd, &docCount, sizeof(size_t)); // doc count
-   read(fd, &junk, sizeof(char));
-
-   read(fd, &type, sizeof(char)); // type of token
-   read(fd, &junk, sizeof(char));
-
-   PostingList postingList(token, type); // generate empty posting list
-   postingList.setUseCount(useCount);
-   postingList.setDocCount(docCount);
-
-   read(fd, &postingList.lastPos, sizeof(size_t)); // last appearance position
-   read(fd, &junk, sizeof(char));
-
-   read(fd, &postingList.lastDoc, sizeof(size_t)); // last document appearance
-   read(fd, &junk, sizeof(char));
-
-   // read and generate seek index
-   size_t seekIndex;
-   read(fd, &seekIndex, sizeof(size_t)); // number of seek rows
-   read(fd, &junk, sizeof(char));
-   postingList.setSeekIndex(seekIndex);
-   
-   for (int i = 0; i < seekIndex; i++) {
-      size_t highBit;
-      std::pair<size_t, size_t> seekData;
-      
-      read(fd, &highBit, sizeof(size_t)); // seek row #i
-      read(fd, &junk, sizeof(char));
-
-      read(fd, &seekData.first, sizeof(size_t)); // index of post 
-      read(fd, &junk, sizeof(char));
-
-      read(fd, &seekData.second, sizeof(size_t)); // index of post 
-      read(fd, &junk, sizeof(char));
-
-      postingList.setSeekTable(i, seekData);
-   }
-
-   // Read posts
-   for (int i = 0; i < useCount; i++) {
-      postingList.addPost(ReadPost());
-      read(fd, &junk, sizeof(char));
-   }
-
-   read(fd, &junk, sizeof(char));
-
-   index->setPostingList(token, postingList);
-}
-
-
-// Read entrie index from memory mapped file
-void IndexReadHandler::ReadIndex() {
-
-   char junk; // store space and endl
-   size_t uniqueTokenNum;
-
-   read(fd, &uniqueTokenNum, sizeof(size_t)); // number of unique tokens
-   read(fd, &junk, sizeof(char));
-   read(fd, &index->WordsInIndex, sizeof(size_t)); // total number of tokens
-   read(fd, &junk, sizeof(char));
-   read(fd, &index->DocumentsInIndex, sizeof(size_t)); // number of documents
-   read(fd, &junk, sizeof(char));
-
-   index->documents.reserve(index->DocumentsInIndex); // document list in index
-   for (int i = 0; i < index->DocumentsInIndex; i++) {
-      index->documents.push_back(ReadString()); // every document in index
-      read(fd, &junk, sizeof(char));
-   }
-   read(fd, &junk, sizeof(char));
-   std::cout << uniqueTokenNum << std::endl;
-   for (int i = 0; i < uniqueTokenNum; i ++) {
-      ReadPostingList(); // posting list itself
-   }
-}
-
-void IndexWriteHandler::WriteString(const string &str) {
-   size_t sz = str.length();
-   write(fd, &sz, sizeof(size_t)); // size of string
-   for (int i = 0; i < sz; i++) 
-      write(fd, str.at(i), sizeof(char)); // content of string
-}
-
-void IndexWriteHandler::WritePost(const Post &post) {
-   write(fd, post.getData(), post.length());
-}
-
-void IndexWriteHandler::WritePostingList(const PostingList &list) {
-
+   blob = reinterpret_cast<IndexBlob*>(mmap(nullptr, fileInfo.st_size, 
+                              PROT_READ, MAP_PRIVATE, fd, 0)); //map bytes to 'blob'
+   if (blob == MAP_FAILED)
+      perror("mmap");
 }
 
 void IndexWriteHandler::WriteIndex() {
-   HashTable<string, PostingList> *dict = index->getDict();
-   size_t n = dict->getKeyCount();
+   //should be optimizing hash to prioritize tokens that appear less
+   //index->getDict()->topbuckets();
+   const IndexBlob *h = IndexBlob::Create(index);
+   size_t n = h->BlobSize;
 
-   write(fd, &n, sizeof(size_t)); // number of unique tokens
-   write(fd, &space, sizeof(char));
-   write(fd, &index->WordsInIndex, sizeof(size_t)); // total number of tokens
-   write(fd, &space, sizeof(char));
-   write(fd, &index->DocumentsInIndex, sizeof(size_t)); // number of documents
-   write(fd, &endl, sizeof(char));
-
-   for (int i = 0; i < index->DocumentsInIndex; i++) {
-      WriteString(index->documents[i]); // every document in index
-      write(fd, &space, sizeof(char));
-   }
-   write(fd, &endl, sizeof(char));
-
-   for (auto i = dict->begin(); i != dict->end(); i++) {
-      WritePostingList(i->value); // posting list itself
-   }
+   write(fd, h, n); // write hash(index)blob to fd
 }
 
 string nextChunk( const char * foldername) {
    char * out;
    const char * lastFile = "";
+   int num = -1;
    for (const auto& entry : std::__fs::filesystem::directory_iterator(foldername)) {
       lastFile = entry.path().filename().c_str();
+      if (atoi(lastFile) > num)
+         num = atoi(lastFile);
    }
-   if (*lastFile == '\0')
+   if (num == -1)
       return string(foldername) + string("/") + string("0");
-   int num = atoi(lastFile);
    num += 1;
-   char * newFile;
-   sprintf(newFile, "%d", num);
+   char newFile[5];
+   snprintf(newFile, sizeof(newFile), "%d", num);
    return string(foldername) + string("/") +  string(newFile);
 }
 
 void IndexHandler::UpdateIH() {
    string fname = nextChunk(folder);
-
+   fileString = fname;
    fd = open(fname.c_str(), O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
    if (fd == -1) {
       std::cerr << "Error opening index file";
@@ -206,16 +86,16 @@ void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
    for (auto &i : parser.bodyWords) {
-      seek = dict.Find(i, PostingList(i, Token::Body));
+      seek = dict.Find(i, PostingList(Token::Body));
       seek->value.appendBodyDelta(WordsInIndex, 0, DocumentsInIndex);
    }
    for (auto &i : parser.headWords) {
-      seek = dict.Find(i, PostingList(i, Token::Body));
+      seek = dict.Find(i, PostingList(Token::Body));
       seek->value.appendBodyDelta(WordsInIndex, 1, DocumentsInIndex);
    }
    for (auto &i : parser.titleWords) {
       concat = string(&titleMarker) + i;
-      seek = dict.Find(concat, PostingList(concat, Token::Title));
+      seek = dict.Find(concat, PostingList(Token::Title));
       seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
 
    }
@@ -223,16 +103,16 @@ void Index::addDocument(HtmlParser &parser) {
       //TODO: implement a better way to index anchor text
       for (auto &j : i.anchorText) {
          concat = string(&anchorMarker) + j;
-         seek = dict.Find(concat, PostingList(concat, Token::Anchor));
+         seek = dict.Find(concat, PostingList(Token::Anchor));
          seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
       }
       concat = string(&urlMarker) + i.URL;
-      seek = dict.Find(concat, PostingList(concat, Token::URL));
+      seek = dict.Find(concat, PostingList(Token::URL));
       seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
    }
 
    concat = string(&eodMarker);
-   seek = dict.Find(concat, PostingList(concat, Token::EoD));
+   seek = dict.Find(concat, PostingList(Token::EoD));
    seek->value.appendEODDelta(WordsInIndex, DocumentsInIndex);
    
    DocumentsInIndex += 1;

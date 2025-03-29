@@ -13,14 +13,13 @@ int main() {
    std::cout << std::endl;
 
    // dictionary
-   HashTable<string, PostingList> *dict = index->getDict();
+   const HashTable<string, PostingList> *dict = index->getDict();
 
 
    for (auto it = dict->begin(); it != dict->end(); it ++) {
       // posting list
       PostingList pl = it->value;
 
-      std::cout << "token: " << pl.getIndex() << " ";
       // std::cout << "use count: " << pl.getUseCount() << std::endl;
       // std::cout << "type: " << pl.getType() << std::endl;
 
