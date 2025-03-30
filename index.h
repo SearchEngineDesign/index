@@ -357,7 +357,7 @@ public:
    void addDocument(HtmlParser &parser) {
       index->addDocument(parser);
       // TODO: sizeof() is not accurate
-      size_t sz = sizeof(*index);
+      size_t sz = index->getDict()->getKeyCount();
       if (sz > MAX_INDEX_SIZE) {
          WriteIndex();
          if (msync(map, fsize, MS_SYNC) == -1) {
