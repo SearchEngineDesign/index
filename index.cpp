@@ -31,7 +31,7 @@ void IndexReadHandler::ReadIndex(const char * fname) {
 
 void IndexWriteHandler::WriteIndex() {
    //should be optimizing hash to prioritize tokens that appear less
-   //index->getDict()->topbuckets();
+   index->optimizeDict();
    const IndexBlob *h = IndexBlob::Create(index);
    size_t n = h->BlobSize;
 

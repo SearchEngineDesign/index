@@ -301,6 +301,10 @@ public:
       return &dict;
    }
 
+   void *optimizeDict() {
+      dict.Optimize();
+   }
+
    // add one posting list to the dictionary
    void setPostingList(const string & str, const PostingList & pl) {
       dict.Find(str, pl);
