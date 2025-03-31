@@ -19,6 +19,7 @@
 #include "../utils/Utf8.h"
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
+#include "../frontier/ReaderWriterLock.h"
 
 const int MAX_CHUNKS = 4096;
 const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
@@ -336,6 +337,8 @@ public:
    }
 
 protected:
+   ReaderWriterLock rw_lock;
+
    string fileString;
    const char * folder;
    int fd;
@@ -355,9 +358,10 @@ public:
    IndexWriteHandler( const char * foldername ) : IndexHandler( foldername ) {  }
 
    void addDocument(HtmlParser &parser) {
+      WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
-      // TODO: sizeof() is not accurate
-      size_t sz = index->getDict()->getKeyCount();
+      // TODO: better evaluation of size?
+      size_t sz = index->WordsInIndex;
       if (sz > MAX_INDEX_SIZE) {
          WriteIndex();
          if (msync(map, fsize, MS_SYNC) == -1) {
@@ -387,6 +391,8 @@ public:
    void WriteIndex();
 
 private:
+
+
    void WriteString(const string &str);
    void WritePost(const Post &post);
    void WritePostingList(const PostingList &list);
