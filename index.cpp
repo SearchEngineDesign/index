@@ -42,7 +42,7 @@ string nextChunk( const char * foldername) {
    char * out;
    const char * lastFile = "";
    int num = -1;
-   for (const auto& entry : std::__fs::filesystem::directory_iterator(foldername)) {
+   for (const auto& entry : std::filesystem::directory_iterator(foldername)) {
       lastFile = entry.path().filename().c_str();
       if (atoi(lastFile) > num)
          num = atoi(lastFile);
