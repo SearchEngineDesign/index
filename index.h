@@ -26,6 +26,7 @@ const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
 
 class IndexBlob;
 class SerialTuple;
+class SerialString;
 
 enum class Token {
     EoD,            //end-of-document token
@@ -221,11 +222,6 @@ public:
       list.reserve(n);
    }
 
-   // set document count
-   void setDocCount(const size_t docCount) {
-      documentCount = docCount;
-   }
-
    // set row i of seek table
    void setSeekTable(const size_t & i, const std::pair<size_t, size_t> & pair) {
       SeekTable[i] = pair;
@@ -258,7 +254,7 @@ private:
    friend class IndexBlob;
 
     //Common header
-    size_t documentCount;   //number of documents containing token
+    size_t documentCount = 1;   //number of documents containing token
     Token type;             //variety of token
 
     //Type-specific data
@@ -315,10 +311,10 @@ private:
 
    HashTable<string, PostingList> dict;
 
-   char titleMarker = '@';
-   char anchorMarker = '$';
-   char urlMarker = '#';
-   char eodMarker = '%';
+   string titleMarker = string("@");
+   string anchorMarker = string("$");
+   string urlMarker = string("#");
+   string eodMarker = string("%");
 };
 
 // IndexHandler
@@ -402,7 +398,11 @@ public:
       close(fd);
    }
 
-   const SerialTuple *Find( const char *key );
+   const SerialTuple *Find( const char *key_in );
+   const SerialString *getDocument( const size_t &index_in );
+
+   //for testing - delete later
+   static void testReader(IndexWriteHandler &writer);
 
    void ReadIndex(const char * fname);
 

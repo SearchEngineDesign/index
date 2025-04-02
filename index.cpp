@@ -3,12 +3,28 @@
 #include "index.h"
 #include "../utils/IndexBlob.h"
 
-const SerialTuple *IndexReadHandler::Find(const char * key) {
-   const SerialTuple *tup = blob->Find(key);
-   const SerialPostingList *pl = tup->Value();
-   // do whatever with the SPL
-   const SerialPost* p = pl->getPost(0);
+const SerialTuple *IndexReadHandler::Find(const char * key_in) {
+   const SerialTuple *tup = blob->Find(key_in);
    return tup;
+}
+
+const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
+   const SerialString *str = blob->getDocument(index_in);
+   return str;
+}
+
+void IndexReadHandler::testReader(IndexWriteHandler &writer) {
+   IndexReadHandler readHandler = IndexReadHandler();
+   readHandler.ReadIndex(writer.getFilename().c_str());
+   const SerialTuple *tup = readHandler.Find("body");
+   assert(string(tup->Key()->c_str()) == string("body"));
+   const SerialPostingList *list = tup->Value();
+   assert(list->documentCount == 1);
+   assert(list->posts == 100);
+   const SerialString *str = readHandler.getDocument(0);
+   assert(string(str->c_str()) == string("https://baseURL1"));
+   const SerialString *str2 = readHandler.getDocument(1);
+   assert(string(str2->c_str()) == string("https://baseURL2"));
 }
 
 // Read entire index from memory mapped file
@@ -97,7 +113,7 @@ void Index::addDocument(HtmlParser &parser) {
       seek->value.appendBodyDelta(WordsInIndex, 1, DocumentsInIndex);
    }
    for (auto &i : parser.titleWords) {
-      concat = string(&titleMarker) + i;
+      concat = titleMarker + i;
       seek = dict.Find(concat, PostingList(Token::Title));
       seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
 
@@ -105,17 +121,16 @@ void Index::addDocument(HtmlParser &parser) {
    for (auto &i : parser.links) {
       //TODO: implement a better way to index anchor text
       for (auto &j : i.anchorText) {
-         concat = string(&anchorMarker) + j;
+         concat = anchorMarker + j;
          seek = dict.Find(concat, PostingList(Token::Anchor));
          seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
       }
-      concat = string(&urlMarker) + i.URL;
+      concat = urlMarker + i.URL;
       seek = dict.Find(concat, PostingList(Token::URL));
       seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
    }
 
-   concat = string(&eodMarker);
-   seek = dict.Find(concat, PostingList(Token::EoD));
+   seek = dict.Find(eodMarker, PostingList(Token::EoD));
    seek->value.appendEODDelta(WordsInIndex, DocumentsInIndex);
    
    DocumentsInIndex += 1;
