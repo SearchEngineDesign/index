@@ -145,53 +145,60 @@ uint8_t bitsNeeded(const size_t n) {
     return std::max(1, static_cast<int>(std::ceil(std::log2(n + 1))));
 }
 
-char *formatUtf8(const size_t &delta) {
-   const uint8_t boundary = bitsNeeded(delta);
-   size_t bytes = 0;
-   if (boundary < 7)
-      bytes = 1;
-   else if (boundary < 12)
-      bytes = 2;
-   else if (boundary < 17)
-      bytes = 3;
-   else if (boundary < 22)
-      bytes = 4;
-   else if (boundary < 27)
-      bytes = 5;
-   else if (boundary < 32)
-      bytes = 6;
-   // TODO: capable of encoding 31 bits ( Utf-32 ) but only Unicode in common use
-   else if (boundary < 37)
-      bytes = 7;
+// char *formatUtf8(const size_t &delta) {
+//    const uint8_t boundary = bitsNeeded(delta);
+//    size_t bytes = 0;
+//    if (boundary < 7)
+//       bytes = 1;
+//    else if (boundary < 12)
+//       bytes = 2;
+//    else if (boundary < 17)
+//       bytes = 3;
+//    else if (boundary < 22)
+//       bytes = 4;
+//    else if (boundary < 27)
+//       bytes = 5;
+//    else if (boundary < 32)
+//       bytes = 6;
+//    // TODO: capable of encoding 31 bits ( Utf-32 ) but only Unicode in common use
+//    else if (boundary < 37)
+//       bytes = 7;
 
-   char* bitset = new char[bytes];
-   uint8_t bitsetIndex = 0, initDelta = 0, deltaIndex = 0, index = bytes;
+//    char* bitset = new char[bytes];
+//    uint8_t bitsetIndex = 0, initDelta = 0, deltaIndex = 0, index = bytes;
    
-   while(deltaIndex < boundary) { 
-      if (bitsetIndex % 8 == 0)
-         index--;
-      initDelta = deltaIndex + 6;
-      for (; deltaIndex < initDelta && deltaIndex < boundary; deltaIndex++) {
-         if ((delta >> deltaIndex) & 1)
-            bitset[index] |= 1 << bitsetIndex;
-         bitsetIndex++;
-      }
-      if (deltaIndex < boundary) {
-         bitset[index] |= 0 << bitsetIndex;
-         bitset[index] |= 1 << (bitsetIndex + 1);
-         bitsetIndex += 2;
-      }
-      bitsetIndex = bitsetIndex % 8;
-   }
-   for (int i = 7; i > 7 - bytes; i--)
-      bitset[0] |= 1 << i;
+//    while(deltaIndex < boundary) { 
+//       if (bitsetIndex % 8 == 0)
+//          index--;
+//       initDelta = deltaIndex + 6;
+//       for (; deltaIndex < initDelta && deltaIndex < boundary; deltaIndex++) {
+//          if ((delta >> deltaIndex) & 1)
+//             bitset[index] |= 1 << bitsetIndex;
+//          bitsetIndex++;
+//       }
+//       if (deltaIndex < boundary) {
+//          bitset[index] |= 0 << bitsetIndex;
+//          bitset[index] |= 1 << (bitsetIndex + 1);
+//          bitsetIndex += 2;
+//       }
+//       bitsetIndex = bitsetIndex % 8;
+//    }
+//    for (int i = 7; i > 7 - bytes; i--)
+//       bitset[0] |= 1 << i;
 
-   return bitset;
+//    return bitset;
+// }
+
+uint8_t *formatUtf8(const size_t &delta) {
+   size_t size = SizeOfCustomUtf8(delta);
+   uint8_t *deltaUtf8 = new uint8_t[size];
+   WriteCustomUtf8(deltaUtf8, delta, size);
+   return deltaUtf8;
 }
 
 void PostingList::appendTitleDelta(size_t &WordsInIndex, size_t &doc) {
    size_t delta = Delta(WordsInIndex, doc);
-   list.emplace_back(formatUtf8(delta)); // TODO: memory leak? change to Utf8.h, unsigned char vs char
+   list.emplace_back(formatUtf8(delta)); // TODO: memory leak?
    UpdateSeek(list.size()-1, WordsInIndex);
 }
 

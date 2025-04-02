@@ -13,6 +13,7 @@
 #include <iostream>
 #include <cstring>
 #include <filesystem>
+#include <cassert>
 
 #include "../utils/string.h"
 #include "../utils/vector.h"
@@ -53,15 +54,18 @@ private:
     //n bits to encode the offset + log(count) bits to number of times the anchor text 
         //the word belongs to has occurred with the URL it links to (for anchor text)
     //n bits to encode the EOF + n bits to encode an index to the corresponding URL for EOF tokens
-    char *data;
+   uint8_t *data;
 
-   int get_bytes(const char first_byte) const {
+   int get_bytes(const uint8_t first_byte) const {
       uint8_t bytes = 0;
       uint8_t sentinel = 7;
+      if (!(first_byte >> sentinel)) // ASCII
+         return 1;
       while ((first_byte >> sentinel) & 1) {
          bytes++;
          sentinel--;
       }
+      assert(bytes < 7);
       return bytes;
    }
 public:
@@ -70,9 +74,9 @@ public:
       data = nullptr;
    }
 
-   Post(const char * data_in) {
+   Post(const uint8_t * data_in) {
       int bytes = get_bytes(data_in[0]);
-      data = new char[bytes];
+      data = new uint8_t[bytes];
       std::memcpy(data, data_in, bytes);
       delete[] data_in;
    }
@@ -80,7 +84,7 @@ public:
    // copy constructor
    Post(const Post& other) {
       int bytes = get_bytes(other.data[0]);
-      data = new char[bytes];
+      data = new uint8_t[bytes];
       std::memcpy(data, other.data, bytes);
    }
 
@@ -89,7 +93,7 @@ public:
          delete[] data;
    }
 
-   char * getData() const {
+   uint8_t * getData() const {
       return data;
    }
 
@@ -103,7 +107,7 @@ public:
       if (data != nullptr)
          delete[] data;
       int bytes = get_bytes(other.data[0]);
-      data = new char[bytes];
+      data = new uint8_t[bytes];
       std::memcpy(data, other.data, bytes);
       return *this;
    }
