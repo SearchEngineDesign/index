@@ -56,6 +56,10 @@ string nextChunk( const char * foldername) {
 }
 
 void IndexHandler::UpdateIH() {
+   if (index != nullptr)
+      delete index;
+   index = new Index();
+
    string fname = nextChunk(folder);
    fileString = fname;
    fd = open(fname.c_str(), O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
@@ -75,8 +79,6 @@ void IndexHandler::UpdateIH() {
 
 IndexHandler::IndexHandler( const char * foldername ) {
    int result;
-   index = new Index();
-
    folder = foldername;
 
    UpdateIH();
@@ -85,6 +87,7 @@ IndexHandler::IndexHandler( const char * foldername ) {
 void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
+   int n = 0;
    for (auto &i : parser.bodyWords) {
       seek = dict.Find(i, PostingList(Token::Body));
       seek->value.appendBodyDelta(WordsInIndex, 0, DocumentsInIndex);

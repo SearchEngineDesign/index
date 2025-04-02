@@ -302,7 +302,7 @@ public:
       return &dict;
    }
 
-   void *optimizeDict() {
+   void optimizeDict() {
       dict.Optimize();
    }
 
@@ -364,13 +364,6 @@ public:
       size_t sz = index->WordsInIndex;
       if (sz > MAX_INDEX_SIZE) {
          WriteIndex();
-         if (msync(map, fsize, MS_SYNC) == -1) {
-            perror("Error syncing memory to file");
-            munmap(map, fsize);
-         }
-         if (munmap(map, fsize == -1)) {
-            perror("Error un-mmapping the file");
-         }
          close(fd);
          UpdateIH();
       }
