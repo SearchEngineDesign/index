@@ -59,8 +59,8 @@ private:
    int get_bytes(const uint8_t first_byte) const {
       uint8_t bytes = 0;
       uint8_t sentinel = 7;
-      //if (!(first_byte >> sentinel)) // ASCII
-      //   return 1;
+      if (!(first_byte >> sentinel)) // ASCII
+         return 1;
       while ((first_byte >> sentinel) & 1) {
          bytes++;
          sentinel--;
