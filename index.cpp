@@ -155,6 +155,8 @@ uint8_t *formatUtf8(const size_t &delta) {
    size_t size = SizeOfCustomUtf8(delta);
    uint8_t *deltaUtf8 = new uint8_t[size];
    WriteCustomUtf8(deltaUtf8, delta, size);
+   assert(deltaUtf8[0] != 0xfe);
+   
    return deltaUtf8;
 }
 

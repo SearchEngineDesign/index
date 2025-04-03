@@ -59,8 +59,8 @@ private:
    int get_bytes(const uint8_t first_byte) const {
       uint8_t bytes = 0;
       uint8_t sentinel = 7;
-      if (!(first_byte >> sentinel)) // ASCII
-         return 1;
+      //if (!(first_byte >> sentinel)) // ASCII
+      //   return 1;
       while ((first_byte >> sentinel) & 1) {
          bytes++;
          sentinel--;
@@ -145,7 +145,6 @@ public:
 
    //Construct empty posting list for string str_in and type
    PostingList(char type_in) {
-
       switch (type_in) {
          case 'e':
             type = Token::EoD;
@@ -200,8 +199,8 @@ public:
    }
 
    // Get ptr to seek table
-   const std::pair<size_t, size_t> *getSeekTable() const {
-      return SeekTable;
+   const vector<std::pair<size_t, size_t>> *getSeekTable() const {
+      return &SeekTable;
    }
 
    // Get seek index
@@ -270,10 +269,10 @@ private:
    uint8_t seekIndex = 0;
     //Seek list
     // Array of size_t pairs -- the first is the index of the post in list, the second is its real location
-   std::pair<size_t, size_t> SeekTable[256];
+   vector<std::pair<size_t, size_t>> SeekTable;
    void UpdateSeek( size_t index, const size_t location ) {
       if (location >= (1 << seekIndex)) { // Is location >= 0x1, 0x10, 0x100, etc
-         SeekTable[seekIndex] = std::make_pair(index, location);
+         SeekTable.push_back(std::make_pair(index, location));
          seekIndex++;
       }
    }
