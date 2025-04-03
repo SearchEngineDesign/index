@@ -77,6 +77,14 @@ size_t countM (const string& word)
     return m;
     }
 
+//counts M without the suffix (denoted by size)
+static inline int countMSubstr(const string& word, size_t suffix)
+    {
+    if (word.size() < suffix)
+        return -1;
+    return countM( word.substr(0, word.size() - suffix ) );
+    }
+
 string standardize (const string& word)
     {
     utf8proc_uint8_t *result = NULL;
@@ -119,14 +127,15 @@ static inline void step1a (string& word)
 
 static inline void cont1b (string& word, size_t m)
     {
+    int end = word.size() - 1;
     if ( word.substr(-2) == (string)"at" )
         word.pushBack('e');
     else if ( word.substr(-2) == (string)"bl" )
         word.pushBack('e');
     else if ( word.substr(-2) == (string)"iz" )
         word.pushBack('e');
-    else if ( doubleConsonant(word), 
-        ( *word.end() != 'l' && *word.end() != 's' && *word.end() != 'z' ) )
+    else if ( doubleConsonant(word) && 
+        ( word[end] != 'l' && word[end] != 's' && word[end] != 'z' ) )
         word.popBack();
     else if ( m == 1 && oCheck(word) )
         word.pushBack('e');
@@ -179,7 +188,7 @@ static inline void step2 (string& word)
     int size = word.size();
     if ( size < 3 )
         return;
-    if (size > 7)
+    if (size > 7 && countMSubstr(word, 7) )
         {
         const string temp = word.substr(-7);
         if (temp == (string)"ational")
@@ -210,7 +219,7 @@ static inline void step2 (string& word)
             return;
             }
         }
-    if (size > 6)
+    if (size > 6  && countMSubstr(word, 6) )
         {
         const string temp = word.substr(-6);
         if (temp == (string)"biliti")
@@ -225,7 +234,7 @@ static inline void step2 (string& word)
             return;
             }
         }
-    if (size > 5)
+    if (size > 5 && countMSubstr(word, 5) )
         {
         const string temp = word.substr(-5);
         if ( temp == (string)"entli" )
@@ -260,7 +269,7 @@ static inline void step2 (string& word)
             word.popBack(2);
             }
         }
-    if (size > 4) 
+    if (size > 4 && countMSubstr(word, 4) ) 
         {
         const string temp = word.substr(-4);
         if ( temp == (string)"enci" )
@@ -279,7 +288,7 @@ static inline void step2 (string& word)
             word[word.size() - 1] = 'e';
             }
         }
-    if (word.substr(-3) == (string)"eli")
+    if (word.substr(-3) == (string)"eli" && countMSubstr(word, 3) )
         word.popBack(2);
     return;
     }
@@ -288,7 +297,7 @@ static inline void step3( string &word )
     size_t size = word.size();
     if (size < 3)
         return;
-    if (size > 5)
+    if (size > 5 && countMSubstr(word, 5) )
         {
         const string temp = word.substr(-5);
         if (temp == (string)"icate")
@@ -312,7 +321,7 @@ static inline void step3( string &word )
             return;
             }
         }
-    if (size > 4)
+    if (size > 4 && countMSubstr(word, 4) )
         {
         const string temp = word.substr(-4);
         if (temp == (string)"ical")
@@ -326,10 +335,11 @@ static inline void step3( string &word )
             return;
             }
         }
-    if (word.substr(-3) == (string)"ful")
+    if (word.substr(-3) == (string)"ful" && countMSubstr(word, 3) )
         word.popBack(3);
     return;
     }
+
 static inline void step4 ( string &word )
     {
     size_t size = word.size();
@@ -343,7 +353,7 @@ static inline void step4 ( string &word )
             word.popBack(5);
             }
         }
-    if (size > 4)
+    if (size > 4 && countMSubstr(word, 4) > 1 )
         {
         const string temp = word.substr(-4);
         if (temp == (string)"ance" || temp == (string)"ence" || temp == (string)"able" || 
@@ -358,7 +368,7 @@ static inline void step4 ( string &word )
             return;
             }
         }
-    if (size > 3)
+    if (size > 3 && countMSubstr(word, 3) > 1 )
         {
         const string temp = word.substr(-3);
         if (temp == (string)"ant" || temp == (string)"ent" || temp == (string)"ism" || temp == (string)"ate" 
@@ -368,7 +378,7 @@ static inline void step4 ( string &word )
             return;
             }   
         }
-    if (size > 2)
+    if (size > 2 && countMSubstr(word, 2) > 1 )
         {
         const string temp = word.substr(-2);
         if (temp == (string)"al" || temp == (string)"er" || temp == (string)"ic" || temp == (string)"ou")
@@ -379,7 +389,7 @@ static inline void step4 ( string &word )
         }
     }
 
-static inline void step5a(string& word, size_t m)
+static inline void step5a(string& word)
     {
     size_t size = word.size();
     if (size < 3)
@@ -389,7 +399,7 @@ static inline void step5a(string& word, size_t m)
         word.popBack(1);
         return;
         }
-    if (m == 1)
+    if (countMSubstr(word, 1) == 1) 
         {
         const string temp = word.substr(size - 1);
         if (!oCheck(temp) && word[size - 1] == 'e')
@@ -422,10 +432,10 @@ string stem (string word)
         step3(word);
         }
     if (m > 1)
-        {
         step4(word);
-        step5a(word, m);
+    step5a(word);
+    if (m > 1)
         step5b(word);
-        }
+        
     return word;
     }
