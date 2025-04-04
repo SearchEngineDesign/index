@@ -24,6 +24,7 @@
 
 const int MAX_CHUNKS = 4096;
 const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
+const int MAX_INDEX_DOCS = 500;
 
 class IndexBlob;
 class SerialTuple;
@@ -353,15 +354,14 @@ protected:
 class IndexWriteHandler : public IndexHandler 
 {
 public:
-   IndexWriteHandler() {}
+   IndexWriteHandler() : IndexHandler() {} 
    IndexWriteHandler( const char * foldername ) : IndexHandler( foldername ) {  }
 
    void addDocument(HtmlParser &parser) {
       WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
-      size_t sz = index->WordsInIndex;
-      if (sz > MAX_INDEX_SIZE) {
+      if (index->WordsInIndex > MAX_INDEX_SIZE) {
          WriteIndex();
          close(fd);
          UpdateIH();

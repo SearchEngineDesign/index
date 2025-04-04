@@ -56,8 +56,8 @@ void IndexWriteHandler::WriteIndex() {
    index->optimizeDict();
    const IndexBlob *h = IndexBlob::Create(index);
    size_t n = h->BlobSize;
-
    write(fd, h, n); // write hash(index)blob to fd
+   IndexBlob::Discard(h);
 }
 
 string nextChunk( const char * foldername) {
@@ -125,7 +125,6 @@ void Index::addDocument(HtmlParser &parser) {
 
    }
    for (auto &i : parser.links) {
-      //TODO: implement a better way to index anchor text
       for (auto &j : i.anchorText) {
          concat = anchorMarker + j;
          seek = dict.Find(concat, PostingList(Token::Anchor));
