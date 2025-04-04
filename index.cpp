@@ -112,31 +112,32 @@ void Index::addDocument(HtmlParser &parser) {
    int n = 0;
    for (auto &i : parser.bodyWords) {
       seek = dict.Find(i, PostingList(Token::Body));
-      seek->value.appendBodyDelta(WordsInIndex, 0, DocumentsInIndex);
+      seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    }
    for (auto &i : parser.headWords) {
-      seek = dict.Find(i, PostingList(Token::Body));
-      seek->value.appendBodyDelta(WordsInIndex, 1, DocumentsInIndex);
+      concat = headMarker + i;
+      seek = dict.Find(concat, PostingList(Token::Body));
+      seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    }
    for (auto &i : parser.titleWords) {
       concat = titleMarker + i;
       seek = dict.Find(concat, PostingList(Token::Title));
-      seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
+      seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
 
    }
    for (auto &i : parser.links) {
       for (auto &j : i.anchorText) {
          concat = anchorMarker + j;
          seek = dict.Find(concat, PostingList(Token::Anchor));
-         seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
+         seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
       }
       concat = urlMarker + i.URL;
       seek = dict.Find(concat, PostingList(Token::URL));
-      seek->value.appendTitleDelta(WordsInIndex, DocumentsInIndex);
+      seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    }
 
    seek = dict.Find(eodMarker, PostingList(Token::EoD));
-   seek->value.appendEODDelta(WordsInIndex, DocumentsInIndex);
+   seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    
    DocumentsInIndex += 1;
    documents.push_back(parser.base);
@@ -159,24 +160,8 @@ uint8_t *formatUtf8(const size_t &delta) {
    return deltaUtf8;
 }
 
-void PostingList::appendTitleDelta(size_t &WordsInIndex, size_t &doc) {
+void PostingList::appendDelta(size_t &WordsInIndex, size_t &doc) {
    size_t delta = Delta(WordsInIndex, doc);
    list.emplace_back(formatUtf8(delta)); // TODO: memory leak?
-   UpdateSeek(list.size()-1, WordsInIndex);
-}
-
-void PostingList::appendBodyDelta(size_t &WordsInIndex, const uint8_t style, size_t &doc) {
-   size_t delta = Delta(WordsInIndex, doc);
-   delta = delta << 1;
-   delta += style;
-   list.emplace_back(formatUtf8(delta)); 
-   UpdateSeek(list.size()-1, WordsInIndex);
-}
-
-void PostingList::appendEODDelta(size_t &WordsInIndex, const size_t doc) {
-   size_t delta = Delta(WordsInIndex, doc);
-   delta = delta << sizeof(doc);
-   delta += doc;
-   list.emplace_back(formatUtf8(delta));  
    UpdateSeek(list.size()-1, WordsInIndex);
 }

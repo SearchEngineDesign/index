@@ -137,9 +137,7 @@ public:
 class PostingList {
 public:
     //virtual Post *Seek( Location );
-    void appendTitleDelta(size_t &WordsInIndex, size_t &doc); //title token
-    void appendBodyDelta(size_t &WordsInIndex, uint8_t style, size_t &doc); //body token
-    void appendEODDelta(size_t &WordsInIndex, const size_t doc); //EOF token
+    void appendDelta(size_t &WordsInIndex, size_t &doc);
 
    //Construct empty posting list for string str_in
    PostingList(Token type_in) : type(type_in) {}
@@ -319,6 +317,7 @@ private:
    string anchorMarker = string("$");
    string urlMarker = string("#");
    string eodMarker = string("%");
+   string headMarker = string("<");
 };
 
 // IndexHandler
