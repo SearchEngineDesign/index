@@ -79,7 +79,7 @@ public:
       int bytes = get_bytes(data_in[0]);
       data = new uint8_t[bytes];
       std::memcpy(data, data_in, bytes);
-      delete[] data_in;
+      delete data_in;
    }
 
    // copy constructor
@@ -90,8 +90,7 @@ public:
    }
 
    ~Post() {
-      if (data != nullptr)
-         delete[] data;
+      delete data;
    }
 
    uint8_t * getData() const {
@@ -329,10 +328,13 @@ public:
    IndexHandler() {};
    IndexHandler( const char * foldername );
    void UpdateIH();
-   virtual ~IndexHandler() {}
 
    string &getFilename() {
       return fileString;
+   }
+
+   virtual ~IndexHandler() {
+      delete folder;
    }
 
 protected:
@@ -377,6 +379,7 @@ public:
          perror("Error un-mmapping the file");
       }
       close(fd);
+      delete folder;
    }
 
    void WriteIndex();

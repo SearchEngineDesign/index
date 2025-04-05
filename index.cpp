@@ -23,10 +23,10 @@ void IndexReadHandler::testReader(IndexWriteHandler &writer) {
    assert(list->posts == 100);
    const SerialString *str = readHandler.getDocument(0);
    const SerialPost *eof = readHandler.Find("%")->Value()->getPost(0);
-   assert(eof->data[0] == static_cast<char>(231));
+   assert(eof->data[0] == static_cast<char>(120));
    for (int i = 1; i < 100; i++) {
       const SerialPost *p = list->getPost(i);
-      assert(p->data[0] == static_cast<char>(130));
+      assert(p->data[0] == static_cast<char>(1));
    }
    assert(string(str->c_str()) == string("https://baseURL1"));
    const SerialString *str2 = readHandler.getDocument(1);
