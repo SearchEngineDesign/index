@@ -79,7 +79,7 @@ public:
       int bytes = get_bytes(data_in[0]);
       data = new uint8_t[bytes];
       std::memcpy(data, data_in, bytes);
-      delete data_in;
+      delete[] data_in;
    }
 
    // copy constructor
@@ -90,7 +90,7 @@ public:
    }
 
    ~Post() {
-      delete data;
+      delete[] data;
    }
 
    uint8_t * getData() const {
@@ -137,6 +137,8 @@ class PostingList {
 public:
     //virtual Post *Seek( Location );
     void appendDelta(size_t &WordsInIndex, size_t &doc);
+
+    void appendURLDelta(size_t &WordsInIndex, size_t &doc, bool owner);
 
    //Construct empty posting list for string str_in
    PostingList(Token type_in) : type(type_in) {}
@@ -314,9 +316,11 @@ private:
 
    string titleMarker = string("@");
    string anchorMarker = string("$");
-   string urlMarker = string("#");
+   string selfRefUrlMarker = string("#1");
+   string otherRefUrlMarker = string("#0");
    string eodMarker = string("%");
    string headMarker = string("<");
+
 };
 
 // IndexHandler

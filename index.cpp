@@ -130,8 +130,11 @@ void Index::addDocument(HtmlParser &parser) {
          concat = anchorMarker + j;
          seek = dict.Find(concat, PostingList(Token::Anchor));
          seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
-      }
-      concat = urlMarker + i.URL;
+      }    
+      if (parser.pURL.Host == i.URL.substr(parser.pURL.Service.length() + 3, parser.pURL.Host.length()))
+         concat = selfRefUrlMarker + i.URL;
+      else
+         concat = otherRefUrlMarker + i.URL;
       seek = dict.Find(concat, PostingList(Token::URL));
       seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    }
