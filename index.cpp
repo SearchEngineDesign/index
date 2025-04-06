@@ -109,6 +109,9 @@ IndexHandler::IndexHandler( const char * foldername ) {
 void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
+   stem(parser.bodyWords);
+   stem(parser.headWords);
+   stem(parser.titleWords);
    int n = 0;
    for (auto &i : parser.bodyWords) {
       seek = dict.Find(i, PostingList(Token::Body));
