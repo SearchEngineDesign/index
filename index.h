@@ -13,6 +13,7 @@
 #include <iostream>
 #include <cstring>
 #include <filesystem>
+#include <cassert>
 
 #include "../utils/string.h"
 #include "../utils/vector.h"
@@ -23,9 +24,11 @@
 
 const int MAX_CHUNKS = 4096;
 const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
+const int MAX_INDEX_DOCS = 500;
 
 class IndexBlob;
 class SerialTuple;
+class SerialString;
 
 enum class Token {
     EoD,            //end-of-document token
@@ -52,15 +55,18 @@ private:
     //n bits to encode the offset + log(count) bits to number of times the anchor text 
         //the word belongs to has occurred with the URL it links to (for anchor text)
     //n bits to encode the EOF + n bits to encode an index to the corresponding URL for EOF tokens
-    char *data;
+   uint8_t *data;
 
-   int get_bytes(const char first_byte) const {
+   int get_bytes(const uint8_t first_byte) const {
       uint8_t bytes = 0;
       uint8_t sentinel = 7;
+      if (!(first_byte >> sentinel)) // ASCII
+         return 1;
       while ((first_byte >> sentinel) & 1) {
          bytes++;
          sentinel--;
       }
+      assert(bytes < 7);
       return bytes;
    }
 public:
@@ -69,9 +75,9 @@ public:
       data = nullptr;
    }
 
-   Post(const char * data_in) {
+   Post(const uint8_t * data_in) {
       int bytes = get_bytes(data_in[0]);
-      data = new char[bytes];
+      data = new uint8_t[bytes];
       std::memcpy(data, data_in, bytes);
       delete[] data_in;
    }
@@ -79,16 +85,15 @@ public:
    // copy constructor
    Post(const Post& other) {
       int bytes = get_bytes(other.data[0]);
-      data = new char[bytes];
+      data = new uint8_t[bytes];
       std::memcpy(data, other.data, bytes);
    }
 
    ~Post() {
-      if (data != nullptr)
-         delete[] data;
+      delete[] data;
    }
 
-   char * getData() const {
+   uint8_t * getData() const {
       return data;
    }
 
@@ -102,7 +107,7 @@ public:
       if (data != nullptr)
          delete[] data;
       int bytes = get_bytes(other.data[0]);
-      data = new char[bytes];
+      data = new uint8_t[bytes];
       std::memcpy(data, other.data, bytes);
       return *this;
    }
@@ -131,16 +136,15 @@ public:
 class PostingList {
 public:
     //virtual Post *Seek( Location );
-    void appendTitleDelta(size_t &WordsInIndex, size_t &doc); //title token
-    void appendBodyDelta(size_t &WordsInIndex, uint8_t style, size_t &doc); //body token
-    void appendEODDelta(size_t &WordsInIndex, const size_t doc); //EOF token
+    void appendDelta(size_t &WordsInIndex, size_t &doc);
+
+    void appendURLDelta(size_t &WordsInIndex, size_t &doc, bool owner);
 
    //Construct empty posting list for string str_in
    PostingList(Token type_in) : type(type_in) {}
 
    //Construct empty posting list for string str_in and type
    PostingList(char type_in) {
-
       switch (type_in) {
          case 'e':
             type = Token::EoD;
@@ -195,8 +199,8 @@ public:
    }
 
    // Get ptr to seek table
-   const std::pair<size_t, size_t> *getSeekTable() const {
-      return SeekTable;
+   const vector<std::pair<size_t, size_t>> *getSeekTable() const {
+      return &SeekTable;
    }
 
    // Get seek index
@@ -219,11 +223,6 @@ public:
    // reserve n post space in list
    void setUseCount(const size_t n) {
       list.reserve(n);
-   }
-
-   // set document count
-   void setDocCount(const size_t docCount) {
-      documentCount = docCount;
    }
 
    // set row i of seek table
@@ -258,7 +257,7 @@ private:
    friend class IndexBlob;
 
     //Common header
-    size_t documentCount;   //number of documents containing token
+    size_t documentCount = 1;   //number of documents containing token
     Token type;             //variety of token
 
     //Type-specific data
@@ -270,10 +269,10 @@ private:
    uint8_t seekIndex = 0;
     //Seek list
     // Array of size_t pairs -- the first is the index of the post in list, the second is its real location
-   std::pair<size_t, size_t> SeekTable[256];
+   vector<std::pair<size_t, size_t>> SeekTable;
    void UpdateSeek( size_t index, const size_t location ) {
       if (location >= (1 << seekIndex)) { // Is location >= 0x1, 0x10, 0x100, etc
-         SeekTable[seekIndex] = std::make_pair(index, location);
+         SeekTable.push_back(std::make_pair(index, location));
          seekIndex++;
       }
    }
@@ -302,7 +301,7 @@ public:
       return &dict;
    }
 
-   void *optimizeDict() {
+   void optimizeDict() {
       dict.Optimize();
    }
 
@@ -315,10 +314,13 @@ private:
 
    HashTable<string, PostingList> dict;
 
-   char titleMarker = '@';
-   char anchorMarker = '$';
-   char urlMarker = '#';
-   char eodMarker = '%';
+   string titleMarker = string("@");
+   string anchorMarker = string("$");
+   string selfRefUrlMarker = string("#1");
+   string otherRefUrlMarker = string("#0");
+   string eodMarker = string("%");
+   string headMarker = string("<");
+
 };
 
 // IndexHandler
@@ -330,10 +332,13 @@ public:
    IndexHandler() {};
    IndexHandler( const char * foldername );
    void UpdateIH();
-   virtual ~IndexHandler() {}
 
    string &getFilename() {
       return fileString;
+   }
+
+   virtual ~IndexHandler() {
+      delete folder;
    }
 
 protected:
@@ -354,23 +359,15 @@ protected:
 class IndexWriteHandler : public IndexHandler 
 {
 public:
-   IndexWriteHandler() {}
+   IndexWriteHandler() : IndexHandler() {} 
    IndexWriteHandler( const char * foldername ) : IndexHandler( foldername ) {  }
 
    void addDocument(HtmlParser &parser) {
       WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
-      size_t sz = index->WordsInIndex;
-      if (sz > MAX_INDEX_SIZE) {
+      if (index->WordsInIndex > MAX_INDEX_SIZE) {
          WriteIndex();
-         if (msync(map, fsize, MS_SYNC) == -1) {
-            perror("Error syncing memory to file");
-            munmap(map, fsize);
-         }
-         if (munmap(map, fsize == -1)) {
-            perror("Error un-mmapping the file");
-         }
          close(fd);
          UpdateIH();
       }
@@ -386,6 +383,7 @@ public:
          perror("Error un-mmapping the file");
       }
       close(fd);
+      delete folder;
    }
 
    void WriteIndex();
@@ -409,7 +407,11 @@ public:
       close(fd);
    }
 
-   const SerialTuple *Find( const char *key );
+   const SerialTuple *Find( const char *key_in );
+   const SerialString *getDocument( const size_t &index_in );
+
+   //for testing - delete later
+   static void testReader(IndexWriteHandler &writer);
 
    void ReadIndex(const char * fname);
 
