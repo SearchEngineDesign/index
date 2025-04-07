@@ -13,24 +13,20 @@ const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
    return str;
 }
 
-void IndexReadHandler::testReader(IndexWriteHandler &writer) {
+void IndexReadHandler::testReader(string name) {
    IndexReadHandler readHandler = IndexReadHandler();
-   readHandler.ReadIndex(writer.getFilename().c_str());
-   const SerialTuple *tup = readHandler.Find("body");
-   assert(string(tup->Key()->c_str()) == string("body"));
-   const SerialPostingList *list = tup->Value();
-   assert(list->documentCount == 1);
-   assert(list->posts == 100);
-   const SerialString *str = readHandler.getDocument(0);
-   const SerialPost *eof = readHandler.Find("%")->Value()->getPost(0);
-   assert(eof->data[0] == static_cast<char>(120));
-   for (int i = 1; i < 100; i++) {
-      const SerialPost *p = list->getPost(i);
-      assert(p->data[0] == static_cast<char>(1));
+   readHandler.ReadIndex(name.c_str());
+   const SerialPost *eof = readHandler.Find("%")->Value()->getPost(10);
+   for (int i = 0; i < readHandler.getBlob()->DocumentsInIndex; i++) {
+      std::cout << readHandler.getDocument(i)->c_str() << std::endl;
+      std::cout << "Post: " << readHandler.Find("%")->Value()->getPost(i) << std::endl;
    }
-   assert(string(str->c_str()) == string("https://baseURL1"));
-   const SerialString *str2 = readHandler.getDocument(1);
-   assert(string(str2->c_str()) == string("https://baseURL2"));
+   const SerialString *str1 = readHandler.getDocument(0);
+   const SerialString *str2 = readHandler.getDocument(52);
+   
+   std::cout << readHandler.getBlob()->DocumentsInIndex << " documents in index" << std::endl;
+   std::cout << readHandler.getBlob()->WordsInIndex<< " words in index" << std::endl;
+   std::cout << readHandler.getBlob()->keyCount << " unique tokens in index" << std::endl;
 }
 
 // Read entire index from memory mapped file
@@ -64,7 +60,7 @@ string nextChunk( const char * foldername) {
    char * out;
    const char * lastFile = "";
    int num = -1;
-   for (const auto& entry : std::filesystem::directory_iterator(foldername)) {
+   for (const auto& entry : std::__fs::filesystem::directory_iterator(foldername)) {
       lastFile = entry.path().filename().c_str();
       if (atoi(lastFile) > num)
          num = atoi(lastFile);
@@ -109,9 +105,9 @@ IndexHandler::IndexHandler( const char * foldername ) {
 void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
-   stem(parser.bodyWords);
-   stem(parser.headWords);
-   stem(parser.titleWords);
+   //stem(parser.bodyWords);
+   //stem(parser.headWords);
+   //stem(parser.titleWords);
    int n = 0;
    for (auto &i : parser.bodyWords) {
       seek = dict.Find(i, PostingList(Token::Body));

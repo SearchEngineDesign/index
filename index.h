@@ -21,11 +21,12 @@
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
 #include "../frontier/ReaderWriterLock.h"
-#include "stemmer/stemmer.h"
+//#include "stemmer/stemmer.h"
 
 const int MAX_CHUNKS = 4096;
 const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
-const int MAX_INDEX_DOCS = 500;
+const int MAX_WRITES = 10;
+
 
 class IndexBlob;
 class SerialTuple;
@@ -329,7 +330,7 @@ private:
 class IndexHandler {
 public:
 
-   Index *index;
+   Index *index = nullptr;
    IndexHandler() {};
    IndexHandler( const char * foldername );
    void UpdateIH();
@@ -339,14 +340,15 @@ public:
    }
 
    virtual ~IndexHandler() {
-      delete folder;
+      if (index != nullptr)
+         delete index;
    }
 
 protected:
    ReaderWriterLock rw_lock;
 
    string fileString;
-   const char * folder;
+   const char * folder = nullptr;
    int fd;
    void *map;
    int fsize = 0;
@@ -363,7 +365,7 @@ public:
    IndexWriteHandler() : IndexHandler() {} 
    IndexWriteHandler( const char * foldername ) : IndexHandler( foldername ) {  }
 
-   void addDocument(HtmlParser &parser) {
+   int addDocument(HtmlParser &parser) {
       WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
@@ -371,26 +373,24 @@ public:
          WriteIndex();
          close(fd);
          UpdateIH();
+         if (writeCount == MAX_WRITES) { //end program
+            ++writeCount;
+            return 1;
+         }
+         ++writeCount;
       }
+      return 0;
    }
 
    ~IndexWriteHandler() override {
       WriteIndex();
-      if (msync(map, fsize, MS_SYNC) == -1) {
-         perror("Error syncing memory to file");
-         munmap(map, fsize);
-      }
-      if (munmap(map, fsize == -1)) {
-         perror("Error un-mmapping the file");
-      }
       close(fd);
-      delete folder;
    }
 
    void WriteIndex();
 
 private:
-
+   int writeCount = 0;
 
    void WriteString(const string &str);
    void WritePost(const Post &post);
@@ -412,7 +412,7 @@ public:
    const SerialString *getDocument( const size_t &index_in );
 
    //for testing - delete later
-   static void testReader(IndexWriteHandler &writer);
+   static void testReader(string name);
 
    void ReadIndex(const char * fname);
 
