@@ -80,7 +80,7 @@ public:
       int bytes = get_bytes(data_in[0]);
       data = new uint8_t[bytes];
       std::memcpy(data, data_in, bytes);
-      delete[] data_in;
+      delete data_in;
    }
 
    // copy constructor
