@@ -15,7 +15,7 @@ const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
    return str;
 }
 
-void IndexReadHandler::testReader(string name) {
+void IndexReadHandler::testReader(string name, bool verbose) {
    IndexReadHandler readHandler = IndexReadHandler();
    readHandler.ReadIndex(name.c_str());
    const SerialPost *eof = readHandler.Find("%")->Value()->getPost(10);
@@ -50,28 +50,43 @@ void IndexReadHandler::ReadIndex(const char * fname) {
 }
 
 void IndexWriteHandler::WriteIndex() {
-   //should be optimizing hash to prioritize tokens that appear less
+   // optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
    const IndexBlob *h = IndexBlob::Create(index);
    size_t n = h->BlobSize;
-   write(fd, h, n); // write hash(index)blob to fd
+   write(fd, h, n); 
    IndexBlob::Discard(h);
+
+   // write new url blob to end of url blob file
+
+   fd = open("./log/frontier/UrlBlob", O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
+
+   if (fd == -1) {
+      std::cerr << "Error opening blob file";
+	   exit(1);
+   }
+
+   const UrlBlob *u = UrlBlob::Create(index, chunkID);
+   n = u->BlobSize;
+   UrlBlob::Discard(u);
 }
 
-string nextChunk( const char * foldername) {
+string nextChunk( const char * foldername, int &cID ) {
    char * out;
    const char * lastFile = "";
-   int num = -1;
+   cID = -1;
    for (const auto& entry : std::filesystem::directory_iterator(foldername)) {
       lastFile = entry.path().filename().c_str();
-      if (atoi(lastFile) > num)
-         num = atoi(lastFile);
+      if (atoi(lastFile) > cID)
+         cID = atoi(lastFile);
    }
-   if (num == -1)
+   if (cID == -1) {
+      cID = 0;
       return string(foldername) + string("/") + string("0");
-   num += 1;
+   }
+   cID += 1;
    char newFile[5];
-   snprintf(newFile, sizeof(newFile), "%d", num);
+   snprintf(newFile, sizeof(newFile), "%d", cID);
    return string(foldername) + string("/") +  string(newFile);
 }
 
@@ -80,7 +95,7 @@ void IndexHandler::UpdateIH() {
       delete index;
    index = new Index();
 
-   string fname = nextChunk(folder);
+   string fname = nextChunk(folder, chunkID);
    fileString = fname;
    fd = open(fname.c_str(), O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
    if (fd == -1) {
