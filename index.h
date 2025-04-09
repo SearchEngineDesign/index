@@ -371,6 +371,7 @@ public:
       if (index->WordsInIndex > MAX_INDEX_SIZE && writeCount < MAX_WRITES) {
          ++writeCount;
          WriteIndex();
+         std::cout << "Completed write of chunk " << fileString << std::endl;
          close(fd);
          if (writeCount == MAX_WRITES) { //end program
             return -1;
