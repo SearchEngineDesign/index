@@ -21,7 +21,7 @@
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
 #include "../frontier/ReaderWriterLock.h"
-#include "stemmer/stemmer.h"
+//#include "./stemmer/stemmer.h"
 
 const int MAX_CHUNKS = 4096;
 const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?

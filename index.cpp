@@ -2,8 +2,6 @@
 
 #include "index.h"
 #include "../utils/IndexBlob.h"
-#include <filesystem>
-
 
 const SerialTuple *IndexReadHandler::Find(const char * key_in) {
    const SerialTuple *tup = blob->Find(key_in);
@@ -18,17 +16,21 @@ const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
 void IndexReadHandler::testReader(string name, bool verbose) {
    IndexReadHandler readHandler = IndexReadHandler();
    readHandler.ReadIndex(name.c_str());
-   const SerialPost *eof = readHandler.Find("%")->Value()->getPost(10);
-   for (int i = 0; i < readHandler.getBlob()->DocumentsInIndex; i++) {
-      std::cout << readHandler.getDocument(i)->c_str() << std::endl;
-      std::cout << "Post: " << readHandler.Find("%")->Value()->getPost(i) << std::endl;
+   const SerialTuple *tup = readHandler.Find("body");
+   assert(string(tup->Key()->c_str()) == string("body"));
+   const SerialPostingList *list = tup->Value();
+   assert(list->documentCount == 1);
+   assert(list->posts == 100);
+   const SerialString *str = readHandler.getDocument(0);
+   const SerialPost *eof = readHandler.Find("%")->Value()->getPost(0);
+   assert(eof->data[0] == static_cast<char>(120));
+   for (int i = 1; i < 100; i++) {
+      const SerialPost *p = list->getPost(i);
+      assert(p->data[0] == static_cast<char>(1));
    }
-   const SerialString *str1 = readHandler.getDocument(0);
-   const SerialString *str2 = readHandler.getDocument(52);
-   
-   std::cout << readHandler.getBlob()->DocumentsInIndex << " documents in index" << std::endl;
-   std::cout << readHandler.getBlob()->WordsInIndex<< " words in index" << std::endl;
-   std::cout << readHandler.getBlob()->keyCount << " unique tokens in index" << std::endl;
+   assert(string(str->c_str()) == string("https://baseURL1"));
+   const SerialString *str2 = readHandler.getDocument(1);
+   assert(string(str2->c_str()) == string("https://baseURL2"));
 }
 
 // Read entire index from memory mapped file
@@ -50,43 +52,40 @@ void IndexReadHandler::ReadIndex(const char * fname) {
 }
 
 void IndexWriteHandler::WriteIndex() {
-   // optimizing hash to prioritize tokens that appear less
+   //should be optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
    const IndexBlob *h = IndexBlob::Create(index);
    size_t n = h->BlobSize;
-   write(fd, h, n); 
+   write(fd, h, n); // write hash(index)blob to fd
    IndexBlob::Discard(h);
-
-   // write new url blob to end of url blob file
-
-   fd = open("./log/frontier/UrlBlob", O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
-
-   if (fd == -1) {
-      std::cerr << "Error opening blob file";
-	   exit(1);
-   }
 
    const UrlBlob *u = UrlBlob::Create(index, chunkID);
    n = u->BlobSize;
+   int ufd = open("./log/frontier/UrlBlob", O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
+   if (ufd == -1) {
+      std::cerr << "Error opening index file";
+	   exit(1);
+   }
+   write(ufd, u, n); // write hash(index)blob to fd
    UrlBlob::Discard(u);
 }
 
-string nextChunk( const char * foldername, int &cID ) {
+string nextChunk( const char * foldername, int &chunkID ) {
    char * out;
    const char * lastFile = "";
-   cID = -1;
+   chunkID= -1;
    for (const auto& entry : std::filesystem::directory_iterator(foldername)) {
       lastFile = entry.path().filename().c_str();
-      if (atoi(lastFile) > cID)
-         cID = atoi(lastFile);
-   }
-   if (cID == -1) {
-      cID = 0;
+      if (atoi(lastFile) > chunkID)
+         chunkID = atoi(lastFile);
+   } 
+   if (chunkID == -1) {
+      chunkID = 0;
       return string(foldername) + string("/") + string("0");
    }
-   cID += 1;
+   chunkID += 1;
    char newFile[5];
-   snprintf(newFile, sizeof(newFile), "%d", cID);
+   snprintf(newFile, sizeof(newFile), "%d", chunkID);
    return string(foldername) + string("/") +  string(newFile);
 }
 
@@ -122,9 +121,9 @@ IndexHandler::IndexHandler( const char * foldername ) {
 void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
-   //stem(parser.bodyWords);
-   //stem(parser.headWords);
-   //stem(parser.titleWords);
+   /*stem(parser.bodyWords);
+   stem(parser.headWords);
+   stem(parser.titleWords);*/
    int n = 0;
    for (auto &i : parser.bodyWords) {
       seek = dict.Find(i, PostingList(Token::Body));
