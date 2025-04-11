@@ -368,7 +368,7 @@ public:
       WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
-      if (index->WordsInIndex > MAX_INDEX_SIZE) {
+      if (index->WordsInIndex > MAX_INDEX_SIZE && writeCount < MAX_WRITES) {
          ++writeCount;
          WriteIndex();
          close(fd);
