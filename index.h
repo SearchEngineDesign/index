@@ -23,9 +23,8 @@
 #include "../frontier/ReaderWriterLock.h"
 //#include "./stemmer/stemmer.h"
 
-const int MAX_CHUNKS = 4096;
 const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
-const int MAX_WRITES = 5;
+const int MAX_WRITES = 5; // max writes before pruning the frontier / other memory sinks
 
 class IndexBlob;
 class SerialTuple;
@@ -369,7 +368,7 @@ public:
       WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
-      if (index->WordsInIndex > MAX_INDEX_SIZE && writeCount < MAX_WRITES) {
+      if (index->WordsInIndex > MAX_INDEX_SIZE) {
          ++writeCount;
          WriteIndex();
          close(fd);
