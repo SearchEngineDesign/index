@@ -27,8 +27,11 @@ const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
 const int MAX_WRITES = 5; // max writes before pruning the frontier / other memory sinks
 
 class IndexBlob;
+class UrlBlob;
+
 class SerialTuple;
 class SerialString;
+class SerialUrlTuple;
 
 enum class Token {
     EoD,            //end-of-document token
@@ -338,7 +341,8 @@ public:
    }
 
    virtual ~IndexHandler() {
-      delete folder;
+      if (folder)
+         delete folder;
    }
 
 protected:
@@ -347,7 +351,7 @@ protected:
    string fileString;
    int chunkID;
 
-   const char * folder;
+   const char * folder = nullptr;
    int fd;
    void *map;
    int fsize = 0;
@@ -368,15 +372,16 @@ public:
       WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
-      if (index->WordsInIndex > MAX_INDEX_SIZE && writeCount < MAX_WRITES) {
+      if (index->WordsInIndex > MAX_INDEX_SIZE) {
          ++writeCount;
          WriteIndex();
          close(fd);
-         if (writeCount == MAX_WRITES) { //end program
-            return -1;
-         } else {
+         if (writeCount == MAX_WRITES) { 
+            writeCount = 0;
             UpdateIH();
+            return -1;
          }
+         UpdateIH();
          return 1;
       }
       return 0;
@@ -410,15 +415,15 @@ public:
 
    ~IndexReadHandler() override {
       close(fd);
+      close(ufd);
    }
 
    const SerialTuple *Find( const char *key_in );
    const SerialString *getDocument( const size_t &index_in );
-
-   //for testing - delete later
-   static void testReader(string name, bool verbose);
+   const SerialUrlTuple *FindUrl(const char * key_in);
 
    void ReadIndex(const char * fname);
+   void ReadUrlBlob(const char * fname);
 
    const IndexBlob* getBlob() {
       return blob;
@@ -431,8 +436,16 @@ private:
       fstat( f, &fileInfo );
       return fileInfo.st_size;
       }
-
    IndexBlob* blob;
+
+   int ufd;
+   struct stat ufileInfo;
+   size_t uFileSize( int f )
+      {
+      fstat( f, &ufileInfo );
+      return ufileInfo.st_size;
+      }
+   UrlBlob* ublob;
 };
 
 #endif

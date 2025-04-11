@@ -11,26 +11,23 @@ const SerialTuple *IndexReadHandler::Find(const char * key_in) {
 const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
    const SerialString *str = blob->getDocument(index_in);
    return str;
-}
+}  
 
-void IndexReadHandler::testReader(string name, bool verbose) {
-   IndexReadHandler readHandler = IndexReadHandler();
-   readHandler.ReadIndex(name.c_str());
-   const SerialTuple *tup = readHandler.Find("body");
-   assert(string(tup->Key()->c_str()) == string("body"));
-   const SerialPostingList *list = tup->Value();
-   assert(list->documentCount == 1);
-   assert(list->posts == 100);
-   const SerialString *str = readHandler.getDocument(0);
-   const SerialPost *eof = readHandler.Find("%")->Value()->getPost(0);
-   assert(eof->data[0] == static_cast<char>(120));
-   for (int i = 1; i < 100; i++) {
-      const SerialPost *p = list->getPost(i);
-      assert(p->data[0] == static_cast<char>(1));
+const SerialUrlTuple *IndexReadHandler::FindUrl(const char * key_in) {
+   const SerialUrlTuple *tup = nullptr;
+   UrlBlob *init = ublob;
+   int i = 0;
+   // iterate through blobs
+   while (i < ufileInfo.st_size) {
+      tup = ublob->FindUrl(key_in);
+      i += ublob->BlobSize;
+      if (tup == nullptr)
+         ublob = reinterpret_cast<UrlBlob*>((char*)ublob + ublob->BlobSize);
+      else
+         break;
    }
-   assert(string(str->c_str()) == string("https://baseURL1"));
-   const SerialString *str2 = readHandler.getDocument(1);
-   assert(string(str2->c_str()) == string("https://baseURL2"));
+   ublob = init;
+   return tup;
 }
 
 // Read entire index from memory mapped file
@@ -51,6 +48,23 @@ void IndexReadHandler::ReadIndex(const char * fname) {
       perror("mmap");
 }
 
+void IndexReadHandler::ReadUrlBlob(const char * fname) {
+   // Open the file for reading, map it, check the header,
+   // and note the blob address.
+   ufd = open(fname, O_RDONLY);
+
+   if (ufd == -1) 
+      perror("open");
+
+   if (uFileSize(ufd) == -1) //get file size
+      perror("fstat");
+
+   ublob = reinterpret_cast<UrlBlob*>(mmap(nullptr, ufileInfo.st_size, 
+                              PROT_READ, MAP_PRIVATE, ufd, 0)); //map bytes to 'blob'
+   if (ublob == MAP_FAILED)
+      perror("mmap");
+}
+
 void IndexWriteHandler::WriteIndex() {
    //should be optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
@@ -66,7 +80,7 @@ void IndexWriteHandler::WriteIndex() {
       std::cerr << "Error opening index file";
 	   exit(1);
    }
-   write(ufd, u, n); // write hash(index)blob to fd
+   write(ufd, u, n); // write urlblob to ufd
    UrlBlob::Discard(u);
 }
 
