@@ -23,7 +23,8 @@
 #include "../frontier/ReaderWriterLock.h"
 //#include "./stemmer/stemmer.h"
 
-const int MAX_INDEX_SIZE = 2000000; // ? 2mb ?
+const int MAX_INDEX_SIZE = 5000000; // ? 2mb ?
+const int MAX_DOCS = 1000;
 const int MAX_WRITES = 5; // max writes before pruning the frontier / other memory sinks
 
 class IndexBlob;
@@ -369,22 +370,24 @@ public:
    IndexWriteHandler( const char * foldername ) : IndexHandler( foldername ) {  }
 
    int addDocument(HtmlParser &parser) {
+      int ret = 0;
       WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
-      if (index->WordsInIndex > MAX_INDEX_SIZE) {
+      if (index->DocumentsInIndex > MAX_DOCS
+         && index->WordsInIndex > MAX_INDEX_SIZE) {
          ++writeCount;
          WriteIndex();
          close(fd);
          if (writeCount == MAX_WRITES) { 
             writeCount = 0;
-            UpdateIH();
-            return -1;
+            ret = -1;
+         } else {
+            ret = 1;
          }
-         UpdateIH();
-         return 1;
+         UpdateIH(); 
       }
-      return 0;
+      return ret;
    }
 
    ~IndexWriteHandler() override {

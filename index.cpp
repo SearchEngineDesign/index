@@ -3,6 +3,7 @@
 #include "index.h"
 #include "../utils/IndexBlob.h"
 
+
 const SerialTuple *IndexReadHandler::Find(const char * key_in) {
    const SerialTuple *tup = blob->Find(key_in);
    return tup;
