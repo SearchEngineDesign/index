@@ -322,6 +322,7 @@ private:
    string anchorMarker = string("$");
    string selfRefUrlMarker = string("#1");
    string otherRefUrlMarker = string("#0");
+   string selfUrlMarker = string("##");
    string eodMarker = string("%");
    string headMarker = string("<");
 

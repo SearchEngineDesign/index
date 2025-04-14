@@ -74,7 +74,7 @@ void IndexWriteHandler::WriteIndex() {
    write(fd, h, n); // write hash(index)blob to fd
    IndexBlob::Discard(h);
 
-   const UrlBlob *u = UrlBlob::Create(index, chunkID);
+   /*const UrlBlob *u = UrlBlob::Create(index, chunkID);
    n = u->BlobSize;
    int ufd = open("./log/frontier/UrlBlob", O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
    if (ufd == -1) {
@@ -82,7 +82,7 @@ void IndexWriteHandler::WriteIndex() {
 	   exit(1);
    }
    write(ufd, u, n); // write urlblob to ufd
-   UrlBlob::Discard(u);
+   UrlBlob::Discard(u);*/
 }
 
 string nextChunk( const char * foldername, int &chunkID ) {
@@ -170,6 +170,11 @@ void Index::addDocument(HtmlParser &parser) {
    }
 
    seek = dict.Find(eodMarker, PostingList(Token::EoD));
+   seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
+
+
+   concat = selfUrlMarker + parser.base;
+   seek = dict.Find(concat, PostingList(Token::URL));
    seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    
    DocumentsInIndex += 1;
