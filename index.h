@@ -333,7 +333,7 @@ private:
 class IndexHandler {
 public:
 
-   Index *index;
+   Index *index = nullptr;
    IndexHandler() {};
    IndexHandler( const char * foldername );
    void UpdateIH();
@@ -343,7 +343,7 @@ public:
    }
 
    virtual ~IndexHandler() {
-      if (folder)
+      if (folder != nullptr)
          delete folder;
    }
 
@@ -432,6 +432,8 @@ public:
    const IndexBlob* getBlob() {
       return blob;
    }
+
+   static void testreader();
 
 private:
    struct stat fileInfo;

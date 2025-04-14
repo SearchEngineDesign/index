@@ -14,6 +14,14 @@ const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
    return str;
 }  
 
+void IndexReadHandler::testreader() {
+   IndexReadHandler ihr;
+   ihr.ReadIndex("./log/chunks/0");
+   const SerialTuple *t = ihr.Find("hello");
+   const SerialString *s = t->Key();
+   const SerialPostingList *p = t->Value();
+}
+
 const SerialUrlTuple *IndexReadHandler::FindUrl(const char * key_in) {
    const SerialUrlTuple *tup = nullptr;
    UrlBlob *init = ublob;
@@ -87,12 +95,11 @@ void IndexWriteHandler::WriteIndex() {
 
 string nextChunk( const char * foldername, int &chunkID ) {
    char * out;
-   const char * lastFile = "";
    chunkID= -1;
    for (const auto& entry : std::filesystem::directory_iterator(foldername)) {
-      lastFile = entry.path().filename().c_str();
-      if (atoi(lastFile) > chunkID)
-         chunkID = atoi(lastFile);
+      int currID = atoi(entry.path().filename().c_str());
+      if (currID > chunkID)
+         chunkID = currID;
    } 
    if (chunkID == -1) {
       chunkID = 0;
