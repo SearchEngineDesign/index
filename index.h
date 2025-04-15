@@ -21,7 +21,7 @@
 #include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
 #include "../frontier/ReaderWriterLock.h"
-//#include "./stemmer/stemmer.h"
+#include "./stemmer/stemmer.h"
 
 const int MAX_INDEX_SIZE = 5000000; // ? 2mb ?
 const int MAX_DOCS = 1000;

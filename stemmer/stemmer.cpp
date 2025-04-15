@@ -63,7 +63,7 @@ size_t countM (const string& word)
     while (!v && i < size);
     if (i == size)
         return 0;
-    for (i; i < size; i++)
+    for (int i; i < size; i++)
         {
         bool t = isVowel(word, i);
         //start of new sequence VC
@@ -106,7 +106,7 @@ string standardize (const string& word)
     string newWord(result_len);
     for (int i = 0; i < result_len; i++)
         if ( isNum( result[i] ) || isLowerAlpha( result[i] ) )
-            newWord.pushBack(result[i]);
+            newWord.push_back(result[i]);
     free(result);
     return newWord;
     }
@@ -129,16 +129,16 @@ static inline void cont1b (string& word, size_t m)
     {
     int end = word.size() - 1;
     if ( word.substr(-2) == (string)"at" )
-        word.pushBack('e');
+        word.push_back('e');
     else if ( word.substr(-2) == (string)"bl" )
-        word.pushBack('e');
+        word.push_back('e');
     else if ( word.substr(-2) == (string)"iz" )
-        word.pushBack('e');
+        word.push_back('e');
     else if ( doubleConsonant(word) && 
         ( word[end] != 'l' && word[end] != 's' && word[end] != 'z' ) )
         word.popBack();
     else if ( m == 1 && oCheck(word) )
-        word.pushBack('e');
+        word.push_back('e');
     }
 
 static inline void step1b (string& word, size_t m)
@@ -194,13 +194,13 @@ static inline void step2 (string& word)
         if (temp == (string)"ational")
             {
             word.popBack(5);
-            word.pushBack('e');
+            word.push_back('e');
             return;
             }
         else if (temp == (string)"ization")
             {
             word.popBack(5);
-            word.pushBack('e');
+            word.push_back('e');
             return;
             }
         else if (temp == (string)"iveness")
