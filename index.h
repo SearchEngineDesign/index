@@ -15,7 +15,7 @@
 #include <filesystem>
 #include <cassert>
 
-#include "../utils/string.h"
+#include "../utils/searchstring.h"
 #include "../utils/vector.h"
 #include "../utils/Utf8.h"
 #include "../utils/HashTable.h"
