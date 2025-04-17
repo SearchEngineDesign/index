@@ -23,8 +23,8 @@
 #include "../frontier/ReaderWriterLock.h"
 #include "./stemmer/stemmer.h"
 
-const int MAX_INDEX_SIZE = 5000000; // ? 2mb ?
-const int MAX_DOCS = 1000;
+const int MAX_INDEX_SIZE = 10000000; // ? 2mb ?
+const int MAX_DOCS = 5000;
 const int MAX_WRITES = 5; // max writes before pruning the frontier / other memory sinks
 
 class IndexBlob;
