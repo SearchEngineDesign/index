@@ -99,7 +99,7 @@ string standardize (const string& word)
     );
     if (result_len < 0)
         {
-        std::cerr << "utf8proc has encountered an error. Code: " << result_len << std::endl;
+        std::cerr << "utf8proc has encountered an error. Word: " << word << std::endl;
         free(result);
         return word;
         }
