@@ -3,6 +3,7 @@
 #include "index.h"
 #include "../utils/IndexBlob.h"
 
+ReaderWriterLock chunk_lock;
 
 const SerialTuple *IndexReadHandler::Find(const char * key_in) {
    const SerialTuple *tup = blob->Find(key_in);
@@ -14,30 +15,15 @@ const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
    return str;
 }  
 
-void IndexReadHandler::testreader() {
-   IndexReadHandler ihr;
-   ihr.ReadIndex("./log/chunks/0");
-   const SerialTuple *t = ihr.Find("hello");
-   const SerialString *s = t->Key();
-   const SerialPostingList *p = t->Value();
-}
-
-const SerialUrlTuple *IndexReadHandler::FindUrl(const char * key_in) {
-   const SerialUrlTuple *tup = nullptr;
-   UrlBlob *init = ublob;
-   int i = 0;
-   // iterate through blobs
-   while (i < ufileInfo.st_size) {
-      tup = ublob->FindUrl(key_in);
-      i += ublob->BlobSize;
-      if (tup == nullptr)
-         ublob = reinterpret_cast<UrlBlob*>((char*)ublob + ublob->BlobSize);
-      else
-         break;
+/*void IndexReadHandler::WriteUrlBlob(int chunk) {
+   int size = 0;
+   vector<const Serialstring*> urls;
+   for (auto i = 0; i < blob->DocumentsInIndex; i++) {
+      urls.push_back(url);
    }
-   ublob = init;
-   return tup;
-}
+   UrlBlob::Create(urls);
+      
+}*/
 
 // Read entire index from memory mapped file
 void IndexReadHandler::ReadIndex(const char * fname) {
@@ -57,23 +43,6 @@ void IndexReadHandler::ReadIndex(const char * fname) {
       perror("mmap");
 }
 
-void IndexReadHandler::ReadUrlBlob(const char * fname) {
-   // Open the file for reading, map it, check the header,
-   // and note the blob address.
-   ufd = open(fname, O_RDONLY);
-
-   if (ufd == -1) 
-      perror("open");
-
-   if (uFileSize(ufd) == -1) //get file size
-      perror("fstat");
-
-   ublob = reinterpret_cast<UrlBlob*>(mmap(nullptr, ufileInfo.st_size, 
-                              PROT_READ, MAP_PRIVATE, ufd, 0)); //map bytes to 'blob'
-   if (ublob == MAP_FAILED)
-      perror("mmap");
-}
-
 void IndexWriteHandler::WriteIndex() {
    //should be optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
@@ -81,16 +50,6 @@ void IndexWriteHandler::WriteIndex() {
    size_t n = h->BlobSize;
    write(fd, h, n); // write hash(index)blob to fd
    IndexBlob::Discard(h);
-
-   /*const UrlBlob *u = UrlBlob::Create(index, chunkID);
-   n = u->BlobSize;
-   int ufd = open("./log/frontier/UrlBlob", O_RDWR | O_CREAT | O_APPEND, (mode_t)0600);
-   if (ufd == -1) {
-      std::cerr << "Error opening index file";
-	   exit(1);
-   }
-   write(ufd, u, n); // write urlblob to ufd
-   UrlBlob::Discard(u);*/
 }
 
 string nextChunk( const char * foldername, int &chunkID ) {
@@ -112,6 +71,7 @@ string nextChunk( const char * foldername, int &chunkID ) {
 }
 
 void IndexHandler::UpdateIH() {
+   WithWriteLock wl(chunk_lock);
    if (index != nullptr)
       delete index;
    index = new Index();

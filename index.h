@@ -23,9 +23,8 @@
 #include "../frontier/ReaderWriterLock.h"
 #include "./stemmer/stemmer.h"
 
-const int MAX_INDEX_SIZE = 10000; // ? 2mb ?
-const int MAX_DOCS = 500;
-const int MAX_WRITES = 5; // max writes before pruning the frontier / other memory sinks
+const int MAX_INDEX_SIZE = 1000000; // ? 2mb ?
+const int MAX_DOCS = 5000;
 
 class IndexBlob;
 class UrlBlob;
@@ -367,12 +366,11 @@ protected:
 class IndexWriteHandler : public IndexHandler 
 {
 public:
-   IndexWriteHandler() : IndexHandler() {} 
+   IndexWriteHandler() = delete;
    IndexWriteHandler( const char * foldername ) : IndexHandler( foldername ) {  }
 
    int addDocument(HtmlParser &parser) {
       int ret = 0;
-      WithWriteLock wl(rw_lock); 
       index->addDocument(parser);
       // TODO: better evaluation of size?
       if (index->DocumentsInIndex > MAX_DOCS
@@ -380,12 +378,6 @@ public:
          ++writeCount;
          WriteIndex();
          close(fd);
-         if (writeCount == MAX_WRITES) { 
-            writeCount = 0;
-            ret = -1;
-         } else {
-            ret = 1;
-         }
          UpdateIH(); 
       }
       return ret;
@@ -419,7 +411,6 @@ public:
 
    ~IndexReadHandler() override {
       close(fd);
-      close(ufd);
    }
 
    const SerialTuple *Find( const char *key_in );
@@ -427,11 +418,12 @@ public:
    const SerialUrlTuple *FindUrl(const char * key_in);
 
    void ReadIndex(const char * fname);
-   void ReadUrlBlob(const char * fname);
 
    const IndexBlob* getBlob() {
       return blob;
    }
+
+   void WriteUrlBlob();
 
    static void testreader();
 
@@ -443,15 +435,6 @@ private:
       return fileInfo.st_size;
       }
    IndexBlob* blob;
-
-   int ufd;
-   struct stat ufileInfo;
-   size_t uFileSize( int f )
-      {
-      fstat( f, &ufileInfo );
-      return ufileInfo.st_size;
-      }
-   UrlBlob* ublob;
 };
 
 #endif
