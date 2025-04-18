@@ -13,6 +13,9 @@ string standardize (const string& word);
 //MODIFIES: word
 void stem (string s); 
 
+//takes: string, returns stemmed string
+string stemWord(string s);
+
 //takes: vector of strings, stems each string
 //MODIFIES: each string in the vector
 void stem ( vector<string> v );

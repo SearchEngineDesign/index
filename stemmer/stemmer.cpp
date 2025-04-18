@@ -443,3 +443,10 @@ void stem ( vector<string> v )
     for ( string& s : v)
         stem( s );
     }
+
+string stemWord(string s)
+    {
+    string temp = s;
+    stem(temp);
+    return temp;
+    }
