@@ -23,7 +23,7 @@
 #include "../frontier/ReaderWriterLock.h"
 #include "./stemmer/stemmer.h"
 
-const int MAX_INDEX_SIZE = 1000000; // ? 2mb ?
+const int MAX_INDEX_SIZE = 800000; // ? 8mb ?
 const int MAX_DOCS = 5000;
 
 class IndexBlob;
@@ -373,12 +373,11 @@ public:
       int ret = 0;
       index->addDocument(parser);
       // TODO: better evaluation of size?
+      std::cerr << index->DocumentsInIndex << ' ' << index->WordsInIndex << std::endl;
       if (index->DocumentsInIndex > MAX_DOCS
          && index->WordsInIndex > MAX_INDEX_SIZE) {
-         ++writeCount;
+         std::cerr << "Writing out blob!" << std::endl;
          WriteIndex();
-         close(fd);
-         UpdateIH(); 
       }
       return ret;
    }
@@ -399,7 +398,6 @@ public:
    void WriteIndex();
 
 private:
-   int writeCount = 0;
 };
 
 

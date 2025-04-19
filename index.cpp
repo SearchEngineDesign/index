@@ -44,12 +44,16 @@ void IndexReadHandler::ReadIndex(const char * fname) {
 }
 
 void IndexWriteHandler::WriteIndex() {
+   WithWriteLock wl(chunk_lock);
    //should be optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
    const IndexBlob *h = IndexBlob::Create(index);
    size_t n = h->BlobSize;
    write(fd, h, n); // write hash(index)blob to fd
    IndexBlob::Discard(h);
+
+   close(fd);
+   UpdateIH(); 
 }
 
 string nextChunk( const char * foldername, int &chunkID ) {
@@ -71,7 +75,6 @@ string nextChunk( const char * foldername, int &chunkID ) {
 }
 
 void IndexHandler::UpdateIH() {
-   WithWriteLock wl(chunk_lock);
    if (index != nullptr)
       delete index;
    index = new Index();
@@ -94,9 +97,9 @@ void IndexHandler::UpdateIH() {
 }
 
 IndexHandler::IndexHandler( const char * foldername ) {
+   WithWriteLock wl(chunk_lock);
    int result;
    folder = foldername;
-
    UpdateIH();
 }
 
