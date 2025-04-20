@@ -376,7 +376,6 @@ public:
       std::cout << parser.base << std::endl;
       if (index->DocumentsInIndex > MAX_DOCS
          && index->WordsInIndex > MAX_INDEX_SIZE) {
-         std::cerr << "Writing out blob!" << std::endl;
          WriteIndex();
       }
       return ret;

@@ -44,6 +44,7 @@ void IndexReadHandler::ReadIndex(const char * fname) {
 }
 
 void IndexWriteHandler::WriteIndex() {
+   std::cerr << "Writing out blob!" << std::endl;
    WithWriteLock wl(chunk_lock);
    //should be optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
