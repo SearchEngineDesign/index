@@ -373,7 +373,7 @@ public:
       int ret = 0;
       index->addDocument(parser);
       // TODO: better evaluation of size?
-      std::cerr << index->DocumentsInIndex << ' ' << index->WordsInIndex << std::endl;
+      std::cout << parser.base << std::endl;
       if (index->DocumentsInIndex > MAX_DOCS
          && index->WordsInIndex > MAX_INDEX_SIZE) {
          std::cerr << "Writing out blob!" << std::endl;
