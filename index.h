@@ -342,8 +342,7 @@ public:
    }
 
    virtual ~IndexHandler() {
-      if (folder != nullptr)
-         delete folder;
+      
    }
 
 protected:
@@ -354,7 +353,6 @@ protected:
 
    const char * folder = nullptr;
    int fd;
-   void *map;
    int fsize = 0;
 
    char space = ' ';
@@ -377,21 +375,13 @@ public:
       if (index->DocumentsInIndex > MAX_DOCS
          && index->WordsInIndex > MAX_INDEX_SIZE) {
          WriteIndex();
+         UpdateIH(); 
       }
       return ret;
    }
 
    ~IndexWriteHandler() override {
       WriteIndex();
-      if (msync(map, fsize, MS_SYNC) == -1) {
-         perror("Error syncing memory to file");
-         munmap(map, fsize);
-      }
-      if (munmap(map, fsize == -1)) {
-         perror("Error un-mmapping the file");
-      }
-      close(fd);
-      delete folder;
    }
 
    void WriteIndex();

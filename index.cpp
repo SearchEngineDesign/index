@@ -54,7 +54,6 @@ void IndexWriteHandler::WriteIndex() {
    IndexBlob::Discard(h);
 
    close(fd);
-   UpdateIH(); 
 }
 
 string nextChunk( const char * foldername, int &chunkID ) {
