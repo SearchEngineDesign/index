@@ -45,14 +45,17 @@ void IndexReadHandler::TestIndex() {
 
 void IndexWriteHandler::WriteIndex() {
    std::cerr << "Writing out blob!" << std::endl;
-   WithWriteLock wl(chunk_lock);
+   
    //should be optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
+   std::cerr << "Blob optimized." << std::endl;
    const IndexBlob *h = IndexBlob::Create(index);
+   std::cerr << "Blob created." << std::endl;
    size_t n = h->BlobSize;
    write(fd, h, n); // write hash(index)blob to fd
+   std::cerr << "Blob written." << std::endl;
    IndexBlob::Discard(h);
-
+   std::cerr << "Blob deleted." << std::endl;
    close(fd);
 }
 
@@ -75,6 +78,7 @@ string nextChunk( const char * foldername, int &chunkID ) {
 }
 
 void IndexHandler::UpdateIH() {
+   WithWriteLock wl(chunk_lock);
    if (index != nullptr)
       delete index;
    index = new Index();
@@ -97,7 +101,6 @@ void IndexHandler::UpdateIH() {
 }
 
 IndexHandler::IndexHandler( const char * foldername ) {
-   WithWriteLock wl(chunk_lock);
    int result;
    folder = foldername;
    UpdateIH();
