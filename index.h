@@ -410,9 +410,7 @@ public:
       return blob;
    }
 
-   void WriteUrlBlob();
-
-   static void testreader();
+   void TestIndex();
 
 private:
    struct stat fileInfo;

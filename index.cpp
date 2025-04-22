@@ -16,16 +16,6 @@ const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
    return str;
 }  
 
-/*void IndexReadHandler::WriteUrlBlob(int chunk) {
-   int size = 0;
-   vector<const Serialstring*> urls;
-   for (auto i = 0; i < blob->DocumentsInIndex; i++) {
-      urls.push_back(url);
-   }
-   UrlBlob::Create(urls);
-      
-}*/
-
 // Read entire index from memory mapped file
 void IndexReadHandler::ReadIndex(const char * fname) {
    // Open the file for reading, map it, check the header,
@@ -42,6 +32,15 @@ void IndexReadHandler::ReadIndex(const char * fname) {
                               PROT_READ, MAP_PRIVATE, fd, 0)); //map bytes to 'blob'
    if (blob == MAP_FAILED)
       perror("mmap");
+}
+
+void IndexReadHandler::TestIndex() {
+
+   const SerialTuple *t = blob->Find("word");
+   assert(t != nullptr);
+   const SerialTuple *t1 = blob->Find("start");
+   assert(t1 != nullptr);
+   const SerialPost *p1 = t1->Value()->getPost(2);
 }
 
 void IndexWriteHandler::WriteIndex() {
