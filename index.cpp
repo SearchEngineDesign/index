@@ -2,6 +2,7 @@
 
 #include "index.h"
 #include "../utils/IndexBlob.h"
+#include <ctype.h>
 
 ReaderWriterLock chunk_lock;
 
@@ -103,6 +104,11 @@ IndexHandler::IndexHandler( const char * foldername ) {
    UpdateIH();
 }
 
+void lowerize(string &i) {
+   char * p = i.c_str();
+   for ( ; *p; ++p) *p = tolower(*p);
+}
+
 void Index::addDocument(HtmlParser &parser) {
    Tuple<string, PostingList> *seek;
    string concat;
@@ -111,15 +117,18 @@ void Index::addDocument(HtmlParser &parser) {
    stem(parser.titleWords);*/
    int n = 0;
    for (auto &i : parser.bodyWords) {
+      lowerize(i);
       seek = dict.Find(i, PostingList(Token::Body));
       seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    }
    for (auto &i : parser.headWords) {
+      lowerize(i);
       concat = headMarker + i;
       seek = dict.Find(concat, PostingList(Token::Body));
       seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
    }
    for (auto &i : parser.titleWords) {
+      lowerize(i);
       concat = titleMarker + i;
       seek = dict.Find(concat, PostingList(Token::Title));
       seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
@@ -127,6 +136,7 @@ void Index::addDocument(HtmlParser &parser) {
    }
    for (auto &i : parser.links) {
       for (auto &j : i.anchorText) {
+         lowerize(j);
          concat = anchorMarker + j;
          seek = dict.Find(concat, PostingList(Token::Anchor));
          seek->value.appendDelta(WordsInIndex, DocumentsInIndex);
