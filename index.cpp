@@ -41,6 +41,8 @@ void IndexReadHandler::TestIndex() {
    const SerialTuple *t1 = blob->Find("start");
    assert(t1 != nullptr);
    const SerialPost *p1 = t1->Value()->getPost(2);
+   const SerialTuple *t2 = blob->Find("wikipedia");
+   assert(t2 != nullptr);
 }
 
 void IndexWriteHandler::WriteIndex() {
@@ -48,14 +50,10 @@ void IndexWriteHandler::WriteIndex() {
    
    //should be optimizing hash to prioritize tokens that appear less
    index->optimizeDict();
-   std::cerr << "Blob optimized." << std::endl;
    const IndexBlob *h = IndexBlob::Create(index);
-   std::cerr << "Blob created." << std::endl;
    size_t n = h->BlobSize;
    write(fd, h, n); // write hash(index)blob to fd
-   std::cerr << "Blob written." << std::endl;
    IndexBlob::Discard(h);
-   std::cerr << "Blob deleted." << std::endl;
    close(fd);
 }
 
