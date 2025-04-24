@@ -2,7 +2,7 @@
 #pragma once
 #include "../../utils/searchstring.h"
 #include "../../utils/vector.h"
-#include "utf8proc/utf8proc.h"
+#include "./utf8proc/utf8proc.h"
 
 
 //takes: UTF-8 encoded string with whatever, in unicode
