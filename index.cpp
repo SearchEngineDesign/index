@@ -2,6 +2,7 @@
 
 #include "index.h"
 #include <cf/IndexBlob.h>
+#include <cf/Utf8.h>
 #include <ctype.h>
 
 ReaderWriterLock chunk_lock;
