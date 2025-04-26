@@ -1,6 +1,8 @@
 //index.h
 #pragma once
 
+#ifndef INDEX_H
+#define INDEX_H
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -13,13 +15,13 @@
 #include <filesystem>
 #include <cassert>
 
-
-#include <cfutils.h>
-
+#include "../utils/searchstring.h"
+#include "../utils/vector.h"
+#include "../utils/Utf8.h"
+#include "../utils/HashTable.h"
 #include "../parser/HtmlParser.h"
 #include "../frontier/ReaderWriterLock.h"
 #include "./stemmer/stemmer.h"
-
 
 const int MAX_INDEX_SIZE = 800000; // ? 8mb ?
 const int MAX_DOCS = 5000;
@@ -420,3 +422,4 @@ private:
    IndexBlob* blob;
 };
 
+#endif
