@@ -1,7 +1,7 @@
 //index.cpp
 
 #include "index.h"
-#include "../utils/IndexBlob.h"
+#include <cf/IndexBlob.h>
 #include <ctype.h>
 
 ReaderWriterLock chunk_lock;

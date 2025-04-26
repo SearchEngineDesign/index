@@ -1,7 +1,7 @@
 //stemmer.h
 #pragma once
-#include "../../utils/searchstring.h"
-#include "../../utils/vector.h"
+#include <cf/searchstring.h>
+#include <cf/vec.h>
 #include "./utf8proc/utf8proc.h"
 
 

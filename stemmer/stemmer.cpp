@@ -18,11 +18,12 @@ static inline bool isVowel(const string& word, size_t i)
     if ( word[i] == 'a' || word[i] == 'o' 
     || word[i] == 'e' || word[i] == 'i' || word[i] == 'u')
         return true;
-    if (word[i] == 'y')
+    if (word[i] == 'y') {
         if ( isVowel( word, i - 1 ) )
             return false;
         else
             return true;
+    }
     return false;
     }
 
