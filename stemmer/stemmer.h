@@ -1,8 +1,8 @@
 //stemmer.h
 #pragma once
-#include "../../utils/searchstring.h"
-#include "../../utils/vector.h"
+#include <cf/searchstring.h>
 #include "utf8proc/utf8proc.h"
+#include <cf/vec.h>
 
 
 //takes: UTF-8 encoded string with whatever, in unicode
