@@ -15,10 +15,10 @@
 #include <filesystem>
 #include <cassert>
 
-#include "../utils/searchstring.h"
-#include "../utils/vector.h"
-#include "../utils/Utf8.h"
-#include "../utils/HashTable.h"
+#include <cf/searchstring.h>
+#include <cf/vec.h>
+#include <cf/Utf8.h>
+#include <cf/HashTable.h>
 #include "../parser/HtmlParser.h"
 #include "../frontier/ReaderWriterLock.h"
 #include "./stemmer/stemmer.h"
