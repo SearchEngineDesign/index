@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++14 -Wall -I../../include $(shell pkg-config --cflags openssl)
+CXXFLAGS = -std=c++14 -Wall -g -O0 -I../../include $(shell pkg-config --cflags openssl)
 LDFLAGS = $(shell pkg-config --libs openssl)
 
 # Source and output

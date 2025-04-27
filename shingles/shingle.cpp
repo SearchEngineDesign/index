@@ -5,29 +5,31 @@
 //shingles SHINGLE_SIZE words starting at index start
 size_t ShingleMap::shingleHash(const vector<string> &words, size_t start, size_t shingleSize)
     {
-    unsigned long hash = fnvOffset;
+    if (start >= words.size() || start + shingleSize > words.size()) 
+        return 0;
+    unsigned long hash = shingleFnvOffset;
     for (size_t i = start; i < start + shingleSize; i++) 
         {
-        string str = words[i];
+        const string& str = words[i];
         for (size_t j = 0; j < str.size(); j++) 
             {
-            hash *= fnvPrime;
+            hash *= shingleFnvPrime;
             hash ^= str[j];
             }
         }
-    return hash % fnvMod;
+    return hash % shingleMod;
     }
 
 //FNV hash for a band (char array)
 size_t ShingleMap::shingleHash(char (&band)[BAND_SIZE])
     {
-    unsigned long hash = fnvOffset;
+    unsigned long hash = shingleFnvOffset;
     for (int i = 0; i < BAND_SIZE; i++)
         {
-        hash *= fnvPrime;
+        hash *= shingleFnvPrime;
         hash ^= band[i];
         }
-    return hash % fnvMod;
+    return hash % shingleMod;
     }
 
 vector<size_t> ShingleMap::createShingles(const vector<string> &words) 
@@ -60,6 +62,8 @@ void ShingleMap::sign(const vector<size_t> &shingles, char* signature)
     for (int i = 0; i < SIGNATURE_SIZE; i++)
         signature[i] = ~char(0);
     // Process shingles in batches of 4 for AVX2
+
+    /*
     #ifdef __AVX2__
     for (size_t i = 0; i < shingles.size(); i += 4) {
         __m256i shingle_vec = _mm256_set_epi64x(
@@ -91,15 +95,16 @@ void ShingleMap::sign(const vector<size_t> &shingles, char* signature)
 
     }
     #else
+    */
     // if AVX2 is not supported, use a fallback implementation
     for (int i = 0; i < shingles.size(); i++) 
-        for (int j = 0; j < 64; j++) 
+        for (int j = 0; j < SIGNATURE_SIZE; j++) 
             {
             size_t hash = (a[j] * shingles[i] + b[j]) % p;
             if (hash < signature[j]) 
                 signature[j] = hash;
             }
-    #endif
+    //#endif
     }
 
 void ShingleMap::addDocument(char* signature)
@@ -113,7 +118,7 @@ void ShingleMap::addDocument(char* signature)
     for (int band = 0; band < NUM_BANDS; band++) 
         {
         size_t bandHash = shingleHash(*(char(*)[BAND_SIZE])(signature + band * BAND_SIZE));
-        bandTables[band][bandHash].push_back(shingles_signatures.size() - 1);
+        getBandTable(band)->operator[](bandHash).push_back(shingles_signatures.size() - 1);
         }
     }
 
@@ -128,33 +133,35 @@ void ShingleMap::addDocument(const vector<string> &document)
 bool ShingleMap::isSimilar(char* signature)
     {
     // Check each band
-    for (int band = 0; band < NUM_BANDS; band++) {
+    for (int band = 0; band < NUM_BANDS; band++) 
+        {
         size_t bandHash = shingleHash(*(char(*)[BAND_SIZE])(signature + band * BAND_SIZE));
-        auto it = bandTables[band].find(bandHash);
-        if (it != bandTables[band].end()) {
+        auto it = getBandTable(band)->find(bandHash);
+        if (it != getBandTable(band)->end()) 
             // Check similarity with each candidate
-            for (size_t candidateIdx : it->second) {
-                char* candidate = shingles_signatures[candidateIdx];
+            for (size_t ID : it->second) 
+                {
+                char* candidate = shingles_signatures[ID];
                 int similarBits = 0;
-                for (int i = 0; i < SIGNATURE_SIZE; i++) {
-                    if (signature[i] == candidate[i]) {
+                for (int i = 0; i < SIGNATURE_SIZE; i++)
+                    if (signature[i] == candidate[i])
                         similarBits++;
-                    }
-                }
-                if (similarBits >= NUM_SIMILARITY) {
+                if (similarBits >= NUM_SIMILARITY()) 
                     return true;
                 }
-            }
         }
-    }
     return false;
     }
 
 bool ShingleMap::isSimilar(const vector<string> &document)
     {
+    if (document.empty())
+        return false;
     vector<size_t> shingles = createShingles(document);
-    char signature[SIGNATURE_SIZE];
+    char* signature = new char[SIGNATURE_SIZE];
     sign(shingles, signature);
-    return isSimilar(signature);
+    bool result = isSimilar(signature);
+    delete[] signature;
+    return result;
     }
     
