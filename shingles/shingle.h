@@ -20,8 +20,15 @@ constexpr float SIMILARITY_THRESHOLD = 0.8;
 constexpr int NUM_SIMILARITY = SIMILARITY_THRESHOLD * SIGNATURE_SIZE;
 
 // FNV hash constants
-const size_t fnvPrime = 16777619;
-const size_t fnvOffset = 2166136261;
+#ifndef FNV_PRIME
+#define FNV_PRIME 1099511628211ul
+#endif
+#ifndef FNV_OFFSET
+#define FNV_OFFSET 146959810393466560ul
+#endif
+
+const size_t fnvPrime = FNV_PRIME;
+const size_t fnvOffset = FNV_OFFSET;
 
 //just gettin my shit down to a char
 const size_t p = 255;
