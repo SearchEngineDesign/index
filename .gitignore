@@ -1,0 +1,4 @@
+stemmer/utf8proc/libutf8proc.a
+stemmer/utf8proc/utf8proc.o
+stemmer/utf8proc/libutf8proc.so
+stemmer/utf8proc/libutf8proc.so.3.1.0
