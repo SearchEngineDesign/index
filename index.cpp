@@ -7,7 +7,9 @@
 ReaderWriterLock chunk_lock;
 
 const SerialTuple *IndexReadHandler::Find(const char * key_in) {
-   const SerialTuple *tup = blob->Find(key_in);
+   if (fcntl(fd, F_GETFD) == -1)
+      return nullptr;
+   const SerialTuple *tup = blob->Find(key_in, filesize);
    return tup;
 }
 
@@ -17,32 +19,30 @@ const SerialString *IndexReadHandler::getDocument( const size_t &index_in ) {
 }  
 
 // Read entire index from memory mapped file
-void IndexReadHandler::ReadIndex(const char * fname) {
+int IndexReadHandler::ReadIndex(const char * fname) {
    // Open the file for reading, map it, check the header,
    // and note the blob address.
    fd = open(fname, O_RDONLY);
 
-   if (fd == -1) 
+   if (fd == -1) {
       perror("open");
-
-   if (FileSize(fd) == -1) //get file size
+      return 1;
+   }
+      
+   filesize = lseek(fd, 0, SEEK_END);
+   if (filesize == -1) { //get file size
       perror("fstat");
+      return 1;
+   }
+   void* mapped_memory = mmap(nullptr, filesize, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+   if (mapped_memory == MAP_FAILED) {
+        perror("Error mapping memory");
+        close(fd);
+        return 1;
+    }
 
-   blob = reinterpret_cast<IndexBlob*>(mmap(nullptr, fileInfo.st_size, 
-                              PROT_READ, MAP_PRIVATE, fd, 0)); //map bytes to 'blob'
-   if (blob == MAP_FAILED)
-      perror("mmap");
-}
-
-void IndexReadHandler::TestIndex() {
-
-   const SerialTuple *t = blob->Find("word");
-   assert(t != nullptr);
-   const SerialTuple *t1 = blob->Find("start");
-   assert(t1 != nullptr);
-   const SerialPost *p1 = t1->Value()->getPost(2);
-   const SerialTuple *t2 = blob->Find("wikipedia");
-   assert(t2 != nullptr);
+   blob = static_cast<IndexBlob*>(mapped_memory); //map bytes to 'blob'
+   return 0;
 }
 
 void IndexWriteHandler::WriteIndex() {

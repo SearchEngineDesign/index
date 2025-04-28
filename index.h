@@ -398,13 +398,17 @@ public:
 
    ~IndexReadHandler() override {
       close(fd);
+      if (munmap(mapped_memory, filesize) == -1) {
+        perror("Error unmapping memory");
+        return;
+      }
    }
 
    const SerialTuple *Find( const char *key_in );
    const SerialString *getDocument( const size_t &index_in );
    const SerialUrlTuple *FindUrl(const char * key_in);
 
-   void ReadIndex(const char * fname);
+   int ReadIndex(const char * fname);
 
    const IndexBlob* getBlob() {
       return blob;
@@ -413,12 +417,8 @@ public:
    void TestIndex();
 
 private:
-   struct stat fileInfo;
-   size_t FileSize( int f )
-      {
-      fstat( f, &fileInfo );
-      return fileInfo.st_size;
-      }
+   size_t filesize;
+   void* mapped_memory;
    IndexBlob* blob;
 };
 
